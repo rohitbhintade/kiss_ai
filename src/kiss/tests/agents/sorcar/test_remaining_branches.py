@@ -424,12 +424,10 @@ class TestVSCodeServerBranches:
         assert "/test/file.py" in usage
 
     def test_user_answer_command(self) -> None:
-        """userAnswer command sets the answer and signals the event."""
+        """userAnswer command puts the answer on the queue."""
         server = VSCodeServer()
-        server._user_answer_event = threading.Event()
         server._handle_command({"type": "userAnswer", "answer": "yes"})
-        assert server._user_answer == "yes"
-        assert server._user_answer_event.is_set()
+        assert server._user_answer_queue.get_nowait() == "yes"
 
     def test_get_input_history(self) -> None:
         """getInputHistory command returns deduplicated tasks."""

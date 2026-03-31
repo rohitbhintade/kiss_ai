@@ -368,11 +368,10 @@ class TestVSCodeServerBranches:
         # No crash, no action
         # No crash
 
-    def test_handle_command_user_answer_no_event(self):
+    def test_handle_command_user_answer(self):
         server, events = self._make_server()
-        server._user_answer_event = None
         server._handle_command({"type": "userAnswer", "answer": "42"})
-        assert server._user_answer == "42"
+        assert server._user_answer_queue.get_nowait() == "42"
 
     def test_handle_command_resume_session(self):
         server, events = self._make_server()
@@ -393,19 +392,22 @@ class TestVSCodeServerBranches:
         assert server._merging is False
         assert any(e.get("type") == "merge_ended" for e in events)
 
-    def test_await_user_response_no_event(self):
+    def test_await_user_response_with_answer(self):
         server, events = self._make_server()
-        server._user_answer_event = None
-        server._await_user_response()  # should not crash
+        server._stop_event = threading.Event()
+        server.printer._thread_local.stop_event = server._stop_event
+        server._user_answer_queue.put("hello")
+        result = server._await_user_response()
+        assert result == "hello"
 
     def test_wait_for_user(self):
         server, events = self._make_server()
-        server._user_answer_event = threading.Event()
+        server._stop_event = threading.Event()
+        server.printer._thread_local.stop_event = server._stop_event
 
         def answer():
             time.sleep(0.1)
-            assert server._user_answer_event is not None
-            server._user_answer_event.set()
+            server._user_answer_queue.put("done")
 
         t = threading.Thread(target=answer, daemon=True)
         t.start()
@@ -416,18 +418,18 @@ class TestVSCodeServerBranches:
 
     def test_ask_user_question(self):
         server, events = self._make_server()
-        server._user_answer_event = threading.Event()
-        server._user_answer = "my answer"
+        server._stop_event = threading.Event()
+        server.printer._thread_local.stop_event = server._stop_event
 
         def answer():
             time.sleep(0.1)
-            assert server._user_answer_event is not None
-            server._user_answer_event.set()
+            server._user_answer_queue.put("my answer")
 
         t = threading.Thread(target=answer, daemon=True)
         t.start()
         result = server._ask_user_question("what?")
         t.join(timeout=1)
+        assert result == "my answer"
         assert result == "my answer"
         ask_events = [e for e in events if e["type"] == "askUser"]
         assert len(ask_events) == 1

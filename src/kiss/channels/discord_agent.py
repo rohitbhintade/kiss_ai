@@ -101,29 +101,29 @@ class DiscordChannelBackend:
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bot {self._bot_token}"}
 
-    def _get(self, path: str, params: dict | None = None) -> dict[str, Any]:  # type: ignore[type-arg]
+    def _get(self, path: str, params: dict | None = None) -> Any:  # type: ignore[type-arg]
         resp = requests.get(
             f"{_API_BASE}{path}", headers=self._headers(), params=params, timeout=30
         )
-        return resp.json()  # type: ignore[no-any-return]
+        return resp.json()
 
-    def _post(self, path: str, json_body: dict | None = None) -> dict[str, Any]:  # type: ignore[type-arg]
+    def _post(self, path: str, json_body: dict | None = None) -> Any:  # type: ignore[type-arg]
         resp = requests.post(
             f"{_API_BASE}{path}", headers=self._headers(), json=json_body, timeout=30
         )
-        return resp.json()  # type: ignore[no-any-return]
+        return resp.json()
 
-    def _delete(self, path: str) -> dict[str, Any]:  # type: ignore[type-arg]
+    def _delete(self, path: str) -> Any:  # type: ignore[type-arg]
         resp = requests.delete(f"{_API_BASE}{path}", headers=self._headers(), timeout=30)
         if resp.status_code == 204:
             return {"ok": True}
-        return resp.json()  # type: ignore[no-any-return]
+        return resp.json()
 
-    def _patch(self, path: str, json_body: dict | None = None) -> dict[str, Any]:  # type: ignore[type-arg]
+    def _patch(self, path: str, json_body: dict | None = None) -> Any:  # type: ignore[type-arg]
         resp = requests.patch(
             f"{_API_BASE}{path}", headers=self._headers(), json=json_body, timeout=30
         )
-        return resp.json()  # type: ignore[no-any-return]
+        return resp.json()
 
     def connect(self) -> bool:
         """Authenticate with Discord using the stored bot token."""
