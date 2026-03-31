@@ -4,6 +4,10 @@
   "description": "AI coding assistant powered by KISS Sorcar Agent",
   "version": "0.2.74",
   "publisher": "ksenxx",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ksenxx/kiss_ai"
+  },
   "engines": {
     "vscode": "^1.98.0"
   },
