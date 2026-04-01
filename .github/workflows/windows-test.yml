@@ -110,7 +110,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $kissDir | Out-Null
           Set-Content -Path "$kissDir\.api-keys-prompted" -Value (Get-Date -Format o)
 
-      # ── TEST 1: Verify KISS package imports and agent works on Windows ──
+      # ── TEST 1: Verify KISS package imports and API connectivity ──
       - name: Verify KISS package on Windows
         shell: pwsh
         run: |
@@ -118,10 +118,64 @@ jobs:
           $uvExe = "$env:USERPROFILE\.local\bin\uv.exe"
           Write-Host "Testing KISS package imports..."
           & $uvExe run --directory $kissProject python -c "from kiss.agents.sorcar.stateful_sorcar_agent import StatefulSorcarAgent; print('StatefulSorcarAgent import OK')" 2>&1
-          & $uvExe run --directory $kissProject python -c "from kiss.agents.vscode.server import Server; print('Server import OK')" 2>&1
           & $uvExe run --directory $kissProject python -c "import platform; print(f'Python {platform.python_version()} on {platform.system()} {platform.machine()}')" 2>&1
 
-      # ── TEST 2: Backend functional test (Python server + real LLM task) ──
+      - name: Test Anthropic API connectivity
+        shell: pwsh
+        timeout-minutes: 2
+        run: |
+          $kissProject = $env:KISS_PROJECT
+          $uvExe = "$env:USERPROFILE\.local\bin\uv.exe"
+          Write-Host "Testing direct Anthropic API call..."
+          & $uvExe run --directory $kissProject python -c @"
+          import anthropic, time
+          t0 = time.time()
+          print('Creating client...')
+          client = anthropic.Anthropic()
+          print(f'Client created in {time.time()-t0:.1f}s')
+          print('Sending message...')
+          resp = client.messages.create(model='claude-sonnet-4-20250514', max_tokens=50, messages=[{'role':'user','content':'Say hello in one word'}])
+          print(f'Response in {time.time()-t0:.1f}s: {resp.content[0].text}')
+          print(f'Stop reason: {resp.stop_reason}')
+          print('API connectivity: OK')
+          "@ 2>&1
+
+      # ── TEST 2: Direct agent test (bypasses server, tests agent.run) ──
+      - name: Run direct agent test
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $kissProject = $env:KISS_PROJECT
+          $uvExe = "$env:USERPROFILE\.local\bin\uv.exe"
+          $workDir = (Get-Item "$env:TEMP\kiss-test-workspace").FullName
+
+          & $uvExe run --directory $kissProject python -c @"
+          import os, sys, time
+          work_dir = r'$workDir'
+          print(f'Work dir: {work_dir}')
+          print(f'Files before: {os.listdir(work_dir)}')
+          t0 = time.time()
+          from kiss.agents.sorcar.stateful_sorcar_agent import StatefulSorcarAgent
+          print(f'Import took {time.time()-t0:.1f}s')
+          agent = StatefulSorcarAgent()
+          print(f'Agent created in {time.time()-t0:.1f}s')
+          print('Running task...')
+          agent.run(
+              prompt_template='Create a file called hello.txt containing exactly: Hello from Windows!',
+              model_name='claude-sonnet-4-20250514',
+              work_dir=work_dir,
+          )
+          print(f'Task done in {time.time()-t0:.1f}s')
+          print(f'Files after: {os.listdir(work_dir)}')
+          hello = os.path.join(work_dir, 'hello.txt')
+          if os.path.exists(hello):
+              print(f'SUCCESS: {open(hello).read()!r}')
+          else:
+              print('FAILED: hello.txt not created')
+              sys.exit(1)
+          "@ 2>&1
+
+      # ── TEST 3: Backend functional test (Python server + real LLM task) ──
       - name: Run backend task test via Python server
         shell: pwsh
         timeout-minutes: 10
