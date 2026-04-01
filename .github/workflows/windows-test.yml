@@ -1,0 +1,229 @@
+name: Windows Extension Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-test.yml'
+
+jobs:
+  test-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install VS Code
+        shell: pwsh
+        run: |
+          $url = "https://update.code.visualstudio.com/latest/win32-x64-user/stable"
+          $installer = "$env:TEMP\vscode-installer.exe"
+          Write-Host "Downloading VS Code..."
+          Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+          Write-Host "Installing VS Code..."
+          Start-Process -FilePath $installer -ArgumentList "/VERYSILENT", "/NORESTART", "/MERGETASKS=!runcode" -Wait
+          $codePath = "$env:LOCALAPPDATA\Programs\Microsoft VS Code"
+          echo "$codePath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "$codePath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          Write-Host "VS Code installed to $codePath"
+
+      - name: Install KISS Sorcar extension
+        shell: pwsh
+        run: |
+          $code = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd"
+          $vsix = "${{ github.workspace }}\src\kiss\agents\vscode\kiss-sorcar.vsix"
+          Write-Host "Installing KISS Sorcar extension from $vsix"
+          & $code --install-extension $vsix --force 2>&1
+          Write-Host "Installed extensions:"
+          & $code --list-extensions 2>&1
+
+      - name: Pre-install uv and set up Python environment
+        shell: pwsh
+        run: |
+          # Install uv
+          Write-Host "Installing uv..."
+          $uvDir = "$env:USERPROFILE\.local\bin"
+          New-Item -ItemType Directory -Force -Path $uvDir | Out-Null
+          $uvUrl = "https://releases.astral.sh/github/uv/releases/download/0.11.2/uv-x86_64-pc-windows-msvc.zip"
+          $zipPath = "$env:TEMP\uv.zip"
+          Invoke-WebRequest -Uri $uvUrl -OutFile $zipPath -UseBasicParsing
+          Expand-Archive -Force -Path $zipPath -DestinationPath $uvDir
+          Move-Item -Force "$uvDir\uv-x86_64-pc-windows-msvc\uv.exe" "$uvDir\uv.exe"
+          Move-Item -Force "$uvDir\uv-x86_64-pc-windows-msvc\uvx.exe" "$uvDir\uvx.exe"
+          Remove-Item -Recurse -Force "$uvDir\uv-x86_64-pc-windows-msvc"
+          echo "$uvDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          Write-Host "uv installed to $uvDir"
+
+          # Find the embedded kiss_project inside the installed extension
+          $extDir = Get-ChildItem "$env:USERPROFILE\.vscode\extensions\ksenxx.kiss-sorcar-*" -Directory | Select-Object -First 1
+          $kissProject = "$($extDir.FullName)\kiss_project"
+          Write-Host "KISS project path: $kissProject"
+
+          # Run uv sync to set up Python .venv
+          Write-Host "Running uv sync in $kissProject..."
+          & "$uvDir\uv.exe" sync --directory $kissProject 2>&1
+          Write-Host "uv sync completed"
+
+          # Install Playwright Chromium
+          Write-Host "Installing Playwright Chromium..."
+          & "$uvDir\uv.exe" run --directory $kissProject python -m playwright install chromium 2>&1
+          Write-Host "Playwright installed"
+
+      - name: Create demo workspace
+        shell: pwsh
+        run: |
+          $dir = "$env:TEMP\kiss-test-workspace"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Set-Content -Path "$dir\example.py" -Value "# Example file`nprint('hello world')"
+          Write-Host "Workspace created at $dir"
+
+      - name: Write screenshot helper
+        shell: pwsh
+        run: |
+          $script = @'
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap($screen.Width, $screen.Height)
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen(0, 0, 0, 0, [System.Drawing.Size]::new($screen.Width, $screen.Height))
+          $bmp.Save($args[0], [System.Drawing.Imaging.ImageFormat]::Png)
+          $g.Dispose()
+          $bmp.Dispose()
+          Write-Host "Screenshot saved to $($args[0])"
+          '@
+          Set-Content -Path "${{ github.workspace }}\ss.ps1" -Value $script
+
+      - name: Write API key marker to skip optional key prompts
+        shell: pwsh
+        run: |
+          $kissDir = "$env:USERPROFILE\.kiss"
+          New-Item -ItemType Directory -Force -Path $kissDir | Out-Null
+          Set-Content -Path "$kissDir\.api-keys-prompted" -Value (Get-Date -Format o)
+          Write-Host "API key prompt marker written"
+
+      - name: Launch VS Code and wait for extension activation
+        shell: pwsh
+        run: |
+          $code = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe"
+          $dir = "$env:TEMP\kiss-test-workspace"
+          Write-Host "Launching VS Code..."
+          Start-Process -FilePath $code -ArgumentList "--no-sandbox", "--disable-gpu", $dir
+          Write-Host "Waiting 30 seconds for VS Code + extension to load..."
+          Start-Sleep -Seconds 30
+          & "${{ github.workspace }}\ss.ps1" "${{ github.workspace }}\01-vscode-loaded.png"
+
+      - name: Open KISS Sorcar panel
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms
+
+          # Write Win32 helper to file to avoid YAML escaping issues
+          $cs = 'using System; using System.Runtime.InteropServices; public class W32 { [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); }'
+          Add-Type -TypeDefinition $cs -Language CSharp
+
+          $vscode = Get-Process -Name "Code" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1
+          if ($vscode) {
+              [W32]::SetForegroundWindow($vscode.MainWindowHandle) | Out-Null
+              Write-Host "Focused VS Code window"
+          }
+          Start-Sleep -Seconds 1
+
+          # Open command palette with Ctrl+Shift+P
+          [System.Windows.Forms.SendKeys]::SendWait("^+p")
+          Start-Sleep -Seconds 2
+          & "${{ github.workspace }}\ss.ps1" "${{ github.workspace }}\02-command-palette.png"
+
+          # Type the command to open KISS Sorcar panel
+          [System.Windows.Forms.SendKeys]::SendWait("KISS{:} Open Sorcar Chat")
+          Start-Sleep -Seconds 2
+          & "${{ github.workspace }}\ss.ps1" "${{ github.workspace }}\03-command-typed.png"
+
+          # Press Enter to execute
+          [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")
+          Start-Sleep -Seconds 5
+          & "${{ github.workspace }}\ss.ps1" "${{ github.workspace }}\04-panel-opened.png"
+
+      - name: Focus chat input and type task
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms
+
+          $cs = 'using System; using System.Runtime.InteropServices; public class W32b { [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); }'
+          Add-Type -TypeDefinition $cs -Language CSharp
+
+          $vscode = Get-Process -Name "Code" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1
+          if ($vscode) {
+              [W32b]::SetForegroundWindow($vscode.MainWindowHandle) | Out-Null
+          }
+          Start-Sleep -Seconds 1
+
+          # Use Ctrl+D to focus the chat input (toggleFocus keybinding)
+          [System.Windows.Forms.SendKeys]::SendWait("^d")
+          Start-Sleep -Seconds 2
+          & "${{ github.workspace }}\ss.ps1" "${{ github.workspace }}\05-chat-focused.png"
+
+          # Type the task using clipboard to handle special characters reliably
+          $task = "Create a file called hello.txt with the content Hello from Windows"
+          [System.Windows.Forms.Clipboard]::SetText($task)
+          [System.Windows.Forms.SendKeys]::SendWait("^v")
+          Start-Sleep -Seconds 2
+          & "${{ github.workspace }}\ss.ps1" "${{ github.workspace }}\06-task-typed.png"
+
+          # Submit the task by pressing Enter
+          [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")
+          Write-Host "Task submitted, waiting for execution..."
+
+      - name: Wait for task execution and capture progress
+        shell: pwsh
+        run: |
+          # Take screenshots periodically while the task runs
+          for ($i = 1; $i -le 12; $i++) {
+              Start-Sleep -Seconds 10
+              $num = 6 + $i
+              $padded = "{0:D2}" -f $num
+              & "${{ github.workspace }}\ss.ps1" "${{ github.workspace }}\$padded-progress-$i.png"
+              Write-Host "Progress screenshot $i captured (${i}0 seconds elapsed)"
+          }
+
+      - name: Capture final state
+        shell: pwsh
+        run: |
+          & "${{ github.workspace }}\ss.ps1" "${{ github.workspace }}\19-final-state.png"
+
+          # Check if the task created the expected file
+          $testFile = "$env:TEMP\kiss-test-workspace\hello.txt"
+          if (Test-Path $testFile) {
+              Write-Host "SUCCESS: hello.txt was created!"
+              Write-Host "Content:"
+              Get-Content $testFile
+          } else {
+              Write-Host "hello.txt not found yet - task may still be running or failed"
+              Write-Host "Files in workspace:"
+              Get-ChildItem "$env:TEMP\kiss-test-workspace" -Recurse | ForEach-Object { Write-Host $_.FullName }
+          }
+
+      - name: Collect logs
+        if: always()
+        shell: pwsh
+        run: |
+          $logFile = "$env:USERPROFILE\.kiss\install.log"
+          if (Test-Path $logFile) {
+              Write-Host "=== KISS Sorcar install.log ==="
+              Get-Content $logFile
+          } else {
+              Write-Host "No install.log found"
+          }
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-screenshots
+          path: |
+            *.png
+          retention-days: 7
