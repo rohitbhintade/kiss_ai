@@ -44,28 +44,28 @@ jobs:
       - name: Pre-install uv and set up Python environment
         shell: pwsh
         run: |
-          # Install uv
+          # Install uv using official installer
           Write-Host "Installing uv..."
+          irm https://astral.sh/uv/0.11.2/install.ps1 | iex
           $uvDir = "$env:USERPROFILE\.local\bin"
-          New-Item -ItemType Directory -Force -Path $uvDir | Out-Null
-          $uvUrl = "https://releases.astral.sh/github/uv/releases/download/0.11.2/uv-x86_64-pc-windows-msvc.zip"
-          $zipPath = "$env:TEMP\uv.zip"
-          Invoke-WebRequest -Uri $uvUrl -OutFile $zipPath -UseBasicParsing
-          Expand-Archive -Force -Path $zipPath -DestinationPath $uvDir
-          Move-Item -Force "$uvDir\uv-x86_64-pc-windows-msvc\uv.exe" "$uvDir\uv.exe"
-          Move-Item -Force "$uvDir\uv-x86_64-pc-windows-msvc\uvx.exe" "$uvDir\uvx.exe"
-          Remove-Item -Recurse -Force "$uvDir\uv-x86_64-pc-windows-msvc"
           echo "$uvDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          Write-Host "uv installed to $uvDir"
+          $env:PATH = "$uvDir;$env:PATH"
+          Write-Host "uv installed: $(& "$uvDir\uv.exe" --version)"
 
           # Find the embedded kiss_project inside the installed extension
           $extDir = Get-ChildItem "$env:USERPROFILE\.vscode\extensions\ksenxx.kiss-sorcar-*" -Directory | Select-Object -First 1
           $kissProject = "$($extDir.FullName)\kiss_project"
           Write-Host "KISS project path: $kissProject"
+          if (-not (Test-Path "$kissProject\pyproject.toml")) {
+              Write-Host "ERROR: kiss_project not found in extension!"
+              Get-ChildItem $extDir.FullName -Recurse -Depth 2 | ForEach-Object { Write-Host $_.FullName }
+              exit 1
+          }
 
           # Run uv sync to set up Python .venv
           Write-Host "Running uv sync in $kissProject..."
           & "$uvDir\uv.exe" sync --directory $kissProject 2>&1
+          if ($LASTEXITCODE -ne 0) { Write-Host "WARNING: uv sync failed with exit code $LASTEXITCODE" }
           Write-Host "uv sync completed"
 
           # Install Playwright Chromium
