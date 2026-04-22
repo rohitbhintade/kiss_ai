@@ -12,6 +12,8 @@
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{enumitem}
+\usepackage{fancyvrb}
+\DefineVerbatimEnvironment{prompt}{Verbatim}{fontsize=\scriptsize,frame=single,framesep=2mm,samepage=true}
 
 \title{KISS Sorcar: A Relentless, Self-Continuing AI Agent \\
   for Integrated Software Development}
@@ -188,7 +190,19 @@ flag, and a summary.  When the agent sets \texttt{is\_continue=True},
 the Relentless Agent starts a new sub-session with a fresh context
 window.  The prompt for the new session includes a chronologically
 ordered list of all prior attempt summaries, instructing the agent not
-to redo completed work.
+to redo completed work.  The continuation prompt template is:
+
+\begin{prompt}
+# Task Progress (Continuation {continuation_number})
+
+{progress_text}
+
+# Continue
+- Complete the rest of the task.
+- **DON'T** redo completed work.
+- If you have been retrying the same approach without progress,
+  step back and rethink the strategy from scratch.
+\end{prompt}
 
 \textbf{Forced continuation on failure.}  If a sub-session raises an
 exception (e.g., the step limit is hit before the agent calls finish),
@@ -197,7 +211,38 @@ trajectory to a temporary file, spawns a separate summarizer agent to
 read the trajectory and produce a concise summary, and then uses that
 summary as the progress text for the next sub-session.  This ensures
 that even crashed sessions contribute useful context to subsequent
-attempts.
+attempts.  The summarizer receives the following prompt:
+
+\begin{prompt}
+# Summarizer
+
+The trajectory of the agent is stored in the file: {trajectory_file}
+
+# Instructions
+- Read the trajectory file and analyze it.  The trajectory file
+  could be large.
+- Return a precise chronologically-ordered list of things the
+  agent did with the reason for doing that along with relevant
+  code snippets
+\end{prompt}
+
+\noindent To force the agent to self-continue before hitting the step limit,
+the system prompt is augmented with an instruction that fires near the
+end of the budget:
+
+\begin{prompt}
+# MOST IMPORTANT INSTRUCTIONS
+- **At step {step_threshold}: you MUST call
+  finish(success=False, is_continue=True,
+  summary="precise chronologically-ordered list of things
+  the agent did with the reason for doing that along with
+  relevant code snippets")** or if the task is not complete
+  and you are at risk of running out of steps or context
+  length.
+- Work dir: {work_dir}
+- Current process PID: {current_pid} -- NEVER kill this
+  process.
+\end{prompt}
 
 \textbf{Stall detection.}  After each continuation, the agent extracts
 normalized error phrases from the summary and compares them across the
@@ -206,7 +251,25 @@ consecutive summaries, the system declares a stall and terminates with
 a diagnostic message rather than wasting budget on an infinite retry
 loop.  A stall warning is injected into the prompt after three
 attempts, instructing the agent to abandon its current strategy and
-try a fundamentally different approach.
+try a fundamentally different approach:
+
+\begin{prompt}
+# Stall Warning
+
+You have attempted this task {continuation_number} times
+without success. Review ALL previous attempt summaries above
+carefully.
+
+If the same failures keep recurring:
+1. Do NOT retry the same approach -- it has already failed
+   multiple times.
+2. Identify the ROOT CAUSE of the persistent failure.
+3. Try a fundamentally different strategy.
+4. If no alternative approach exists, call
+   finish(success=False, is_continue=False,
+   summary="STALLED: <describe what keeps failing and why>")
+   to escalate instead of retrying.
+\end{prompt}
 
 \textbf{Budget aggregation.}  Token counts and dollar costs are
 accumulated across all sub-sessions.  Each new sub-session receives
@@ -340,10 +403,15 @@ We describe its key sections.
 \subsection{Execution Mindset}
 %......................................................................
 
-The prompt opens with a directive that sets the tone: \emph{``Focus on
-the given task.  Its completion is your sole goal.  Be relentless.  Be
-calm.  Be rigorous.  Be accurate.  Check facts.  No AI slop.''}  This
-framing discourages the model from hedging, apologizing, or producing
+The prompt opens with a directive that sets the tone:
+
+\begin{prompt}
+# FOCUS ON THE GIVEN TASK. ITS COMPLETION IS YOUR SOLE GOAL.
+# BE RELENTLESS. BE CALM. BE RIGOROUS. BE ACCURATE.
+# CHECK FACTS. NO AI SLOP.
+\end{prompt}
+
+\noindent This framing discourages the model from hedging, apologizing, or producing
 filler text, and encourages decisive, verification-oriented behavior.
 
 %......................................................................
@@ -351,28 +419,63 @@ filler text, and encourages decisive, verification-oriented behavior.
 %......................................................................
 
 The agent is given a concrete identity (name, developer, repository
-URL) rather than a vague persona.  Tool usage rules are explicit: use
-the write tool for new files and the edit tool for small changes; run
-shell commands synchronously with a timeout; use the browser tool for
-web navigation; call finish when done.  These rules eliminate ambiguity
-about which tool to use in which situation.
+URL) rather than a vague persona.  Tool usage rules are explicit and
+mechanical:
 
-A rule about the \texttt{PageDrop} API allows the agent to upload HTML
-files and share them via a public URL, enabling it to create and share
-rich reports, visualizations, or documentation.
+\begin{prompt}
+# Identity
+
+- You are KISS Sorcar, an AI based General Assistant and
+  Integrated Development Environment (IDE), developed by
+  Koushik Sen (ksen@berkeley.edu)
+- Your public repository is at
+  https://github.com/ksenxx/kiss_ai
+
+# Rules
+
+- Write() for new files. Edit() for small changes.
+- Run Bash commands synchronously using the
+  `timeout_seconds` parameter. Use 300s (default) for
+  commands. If a command times out, retry with a higher
+  timeout. Only for commands expected to exceed 10 minutes,
+  run in the background with output redirected to a file
+  and poll periodically.
+- Use go_to_url() for browser tool.
+- Call finish(success=True, is_continue=False,
+  summary="detailed summary of what was accomplished ...")
+  once the task is complete and all Pre-Finish Verification
+  checks have passed.
+- **The user cannot see intermediate chat. Show whatever
+  user asks in the summary of the finish tool call.**
+- READ large files in chunks.
+- Create temporary files in $PWD/tmp
+- Use ultra thinking
+\end{prompt}
+
+\noindent These rules eliminate ambiguity about which tool to use in which
+situation.  A separate rule about the \texttt{PageDrop} API allows the
+agent to upload HTML files and share them via a public URL, enabling it
+to create and share rich reports, visualizations, or documentation.
 
 %......................................................................
 \subsection{Pre-flight Checks}
 %......................................................................
 
-Before modifying any file, the agent is instructed to read it first.
-If a task depends on existing architecture or behavior, the agent must
-read the relevant source files.  If referenced files, commands, or
-configuration do not exist, the agent must stop and ask rather than
-guessing.  When fixing a bug, the agent must write a test that
-reproduces the bug before attempting a fix.
+Before modifying any file, the agent is instructed to read it first:
 
-These pre-flight checks prevent a common failure mode in which the
+\begin{prompt}
+## Pre-flight Checks
+
+- Read every file you will modify before changing it.
+- If the task depends on existing architecture or behavior,
+  read the relevant source files first.
+- If the task references files, commands, or config that do
+  not exist, stop and ask or report instead of guessing.
+- **When fixing a bug, an issue, or a race, write tests to
+  confirm them. Then fix them.**
+\end{prompt}
+
+\noindent These pre-flight checks prevent a common failure mode in which the
 agent modifies a file based on an incorrect assumption about its
 contents, introducing subtle bugs that are difficult to diagnose.
 
@@ -380,15 +483,29 @@ contents, introducing subtle bugs that are difficult to diagnose.
 \subsection{Code Style Guidelines}
 %......................................................................
 
-The prompt encodes a minimalist code philosophy: write simple, clean,
-readable code with minimal indirection; avoid unnecessary attributes,
-variables, and configuration; avoid tight coupling; eliminate
-duplication; document all public methods.  Critically, the agent is
-instructed to understand the root cause of a bug and patch the root
-cause, not apply a superficial fix.
+The prompt encodes a minimalist code philosophy:
 
-A metacognitive instruction asks the agent to pause before writing
-code and consider whether the planned code is simple, elegant,
+\begin{prompt}
+## Code Style Guidelines
+
+- Write simple, clean, and readable code with minimal
+  indirection
+- Avoid unnecessary object attributes, local variables, and
+  config variables
+- Avoid tight coupling among files and modules.
+- Avoid object/struct attribute redirections
+- No redundant abstractions or duplicate code
+- Public methods MUST have full documentation
+- Understand the root cause of an issue or bug, and patch
+  the root cause instead of an ad hoc superficial fix.
+- Before you write code, wait and think if the code is
+  simple, elegant, general, and minimal.
+- Once you finish the task, DO NOT write documentations
+  unless the task specifically requires it.
+\end{prompt}
+
+\noindent The final metacognitive instruction asks the agent to pause before
+writing code and consider whether the planned code is simple, elegant,
 general, and minimal.  This encourages the model to spend more
 inference-time compute on design before committing to an
 implementation.
@@ -397,40 +514,70 @@ implementation.
 \subsection{Deep Work Rules}
 %......................................................................
 
-When a task says ``align'', ``match'', or ``make consistent'', the
-agent must first read the target to determine the exact desired state,
-then write specific concrete values.  It must never edit based on a
-vague reference.  For multi-part work, it must list planned changes
-before executing.  Every meaningful change must have a concrete
-verification method.
-
-These rules address a failure mode where the model interprets an
+The deep work rules address a failure mode where the model interprets an
 instruction loosely and makes changes that are directionally correct
-but concretely wrong.
+but concretely wrong:
+
+\begin{prompt}
+## Deep Work Rules
+
+- When the task says "align", "match", or "make
+  consistent", read the target to determine the exact
+  target state before editing. Never edit based on a vague
+  reference.
+- Use concrete values, not indirections. Instead of "update
+  X to match Y", first read Y, then write the specific
+  values into X.
+- For multi-part work, list the concrete planned changes
+  before executing them.
+- Every meaningful change should have a concrete
+  verification method (test, grep, CLI command).
+\end{prompt}
 
 %......................................................................
 \subsection{Planning for Complex Tasks}
 %......................................................................
 
-For tasks involving three or more files or cross-module changes, the
-agent must produce an explicit plan: list the files that need to
-change and why, state the exact intended change in each file, identify
-dependencies and execution order, and state how each change will be
-verified.  For simple single-file tasks, formal planning is skipped.
+The planning instructions use a complexity threshold to decide when
+formal planning is required:
 
-This adaptive planning rule avoids both the overhead of planning
-trivial changes and the risk of ad-hoc execution on complex changes.
+\begin{prompt}
+## Planning for Complex Tasks
+
+For tasks involving 3+ files, cross-module changes, or
+architectural work:
+
+1. List the files that need to change and why.
+1. State the exact intended change in each file.
+1. Identify dependencies and execution order.
+1. State how each change will be verified.
+
+For simple single-file tasks, skip formal planning and
+execute directly.
+\end{prompt}
+
+\noindent This adaptive rule avoids both the overhead of planning trivial
+changes and the risk of ad-hoc execution on complex changes.
 
 %......................................................................
 \subsection{Testing Instructions}
 %......................................................................
 
-The testing section is perhaps the most opinionated: the agent must
-achieve 100\% branch coverage, tests must not use mocks, patches,
-fakes, or any form of test doubles, all tests must be integration
-tests, and each test must be independent and verify actual behavior.
+The testing section is perhaps the most opinionated:
 
-The prohibition on mocks is a deliberate design choice.  Mocks test
+\begin{prompt}
+## Testing Instructions
+
+- Run lint and typecheckers and fix any lint and typecheck
+  errors.
+- You MUST achieve 100% branch coverage
+- Tests MUST NOT use mocks, patches, fakes, or any form of
+  test doubles
+- You MUST write integration tests
+- Each test should be independent and verify actual behavior
+\end{prompt}
+
+\noindent The prohibition on mocks is a deliberate design choice.  Mocks test
 that code calls certain methods in a certain order --- they test the
 implementation, not the behavior.  Integration tests verify that the
 system actually works, which is what matters for a tool that modifies
@@ -441,12 +588,21 @@ real codebases.
 %......................................................................
 
 The agent maintains a preferences file that captures user invariants
-discovered during task execution.  At the start of each task, it reads
-this file; at the end, it updates it with any new preferences
-inferred from the task.  Conflicting preferences are resolved in favor
-of the newer observation.
+discovered during task execution:
 
-This mechanism allows the agent to learn persistent user preferences
+\begin{prompt}
+## Self-Improvement Loop
+
+- Read the instructions in $PWD/USER_PREFS.md at the start
+  of each task.
+- Then update $PWD/USER_PREFS.md to capture the user
+  preferences and invariants by analyzing the task. DO NOT
+  ADD ANY CODE SNIPPETS OR SYMBOLS. You MUST carefully and
+  thoroughly get rid of the user preferences and invariants
+  that conflict with the newly added ones.
+\end{prompt}
+
+\noindent This mechanism allows the agent to learn persistent user preferences
 (e.g., preferred code style, testing conventions, project-specific
 invariants) without requiring the user to repeat them in every prompt.
 
@@ -454,14 +610,28 @@ invariants) without requiring the user to repeat them in every prompt.
 \subsection{Pre-Finish Verification}
 %......................................................................
 
-Before declaring a task complete, the agent must: re-read every
-modified file and verify correctness, run lint, type checking, and
-tests, explicitly check each user requirement against what was
-delivered, and continue working if any check fails.  If the same fix
-has been retried three times without progress, the agent must step
-back and try a different strategy.
+Before declaring a task complete, the agent must pass a structured
+verification checklist:
 
-This verification protocol is the system-prompt analog of the
+\begin{prompt}
+## Pre-Finish Verification
+
+Before calling finish(success=True, ...), you MUST:
+
+1. Re-read every file you modified and verify the changes
+   are correct.
+1. Run the required checks (lint, typecheck, tests) and
+   fix any failures.
+1. Explicitly check each user requirement against what was
+   delivered.
+1. If any check fails, continue working instead of
+   finishing.
+1. If you have retried the same fix 3 times without
+   progress, step back, rethink the approach from scratch,
+   and try a different strategy.
+\end{prompt}
+
+\noindent This verification protocol is the system-prompt analog of the
 Relentless Agent's stall detection: it prevents the agent from
 declaring premature success and forces it to confront failures.
 
