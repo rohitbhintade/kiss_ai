@@ -465,8 +465,8 @@ mechanical:
 - READ large files in chunks.
 - Create temporary files in PWD/tmp
 - Use ULTRA thinking always
-- **If you are running out of context length or steps, do
-  not try to complete the task urgently, but continue the
+- **If you are running out of context length or steps, DO
+  NOT try to complete the task urgently, but continue the
   task by calling 'finish'**
 - PWD in the system prompt and user prompt denotes current
   working directory.
@@ -536,8 +536,8 @@ Each tool rule addresses a specific failure mode:
   response.  Extended reasoning is particularly valuable for complex
   multi-step tasks where the model must plan before acting.
 
-\item \textbf{``If you are running out of context length or steps, do
-  not try to complete the task urgently, but continue the task by
+\item \textbf{``If you are running out of context length or steps, DO
+  NOT try to complete the task urgently, but continue the task by
   calling finish.''}  When the context window is nearly full, LLMs
   exhibit a ``rush to finish'' behavior: they skip verification
   steps, make hasty edits, and call \texttt{finish} with an
@@ -1053,22 +1053,35 @@ structured research workflow rather than allowing ad-hoc browsing:
 ## Use web tools when you need to:
 
 - When you need to collect knowledge from the internet,
-  visit at least 100 web sites and collect ideas without
-  much thinking in a new file PWD/tmp/ideas-{unique_id}.md.
-  Then go over PWD/tmp/ideas-{unique_id}.md, think deeply
-  on how to complete the task at hand, and complete it.
+  visit **AT LEAST 100 WEB SITES** and collect information
+  necessary for the task without much thinking in a new
+  file PWD/tmp/information-{unique_id}.md. Then go over
+  information in PWD/tmp/information-{unique_id}.md, think
+  deeply on how to complete the task at hand, and
+  complete it.
+- If you need to login to an website while browsing for
+  information, you MUST ask the user to help you with
+  login. You **MUST NOT** ask the user to login to Google.
 \end{prompt}
 
 \noindent The rationale is a two-phase separation between \emph{collection}
 and \emph{synthesis}.  LLMs tend to anchor on the first few results
 they encounter, which biases their solutions toward a narrow slice of
 the design space.  By forcing the agent to accumulate a broad set of
-ideas into a file \emph{before} reasoning about them, the protocol
+information into a file \emph{before} reasoning about it, the protocol
 counteracts anchoring bias and encourages the model to consider
 diverse approaches.  The ``at least 100 web sites'' threshold is
 deliberately aggressive: it ensures the agent does not shortcut the
-research phase after two or three hits, and the resulting ideas file
-serves as an auditable artifact of what the agent considered.
+research phase after two or three hits, and the resulting information
+file serves as an auditable artifact of what the agent considered.
+
+The login instruction addresses a practical obstacle in web research:
+many websites require authentication before revealing their content.
+Rather than silently skipping gated pages or hallucinating their
+contents, we instruct the agent to ask the user for help with login.
+The Google exception acknowledges that the agent can search the web
+without a Google account, and asking the user to log into Google
+would provide no benefit while creating unnecessary friction.
 
 %......................................................................
 \subsection{Desktop Application Control}
