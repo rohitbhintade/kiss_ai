@@ -855,6 +855,65 @@ single-turn chat.  KISS Sorcar operates at the level of autonomous
 multi-step task execution with full tool access and git-level
 isolation.
 
+\textbf{Recent advances in agentic software engineering.}
+The field has matured rapidly since late 2025.
+\citet{hassan2025agentic} articulate the foundational pillars of
+\emph{Agentic Software Engineering} (SE~3.0), defining a research
+roadmap that emphasizes trust, controllability, and goal-oriented task
+decomposition.  \citet{li2025rise} survey the landscape of autonomous
+coding agents and characterize the transition from assistive code
+completion to full-fledged AI teammates that initiate, plan, and
+execute development tasks.  KISS Sorcar instantiates several of the
+principles advocated in these roadmaps, including layered
+controllability (via budget and stall detection) and safe isolation
+(via worktrees).
+
+\citet{wang2025agentic} provide a comprehensive survey of AI agentic
+programming techniques, cataloging how LLM-based agents decompose
+goals, interact with compilers and version control systems, and
+self-correct through feedback loops.
+\citet{chatlatanagulchai2025readmes} study \emph{agent context files}
+--- persistent, project-level instruction files that guide agentic
+coding tools --- and find that high-quality context files significantly
+improve agent performance.  KISS Sorcar's layered system prompt and
+\texttt{SORCAR.md} override mechanism are instances of this pattern.
+\citet{mohsenimofidi2025context} further investigate context
+engineering for AI agents in open-source software, highlighting how
+curated context improves agent efficacy on repository-level tasks.
+
+\textbf{Evolving benchmarks for coding agents.}
+SWE-bench Pro~\citep{deng2025swebenchpro} introduces a substantially
+more challenging benchmark with 1,865 long-horizon problems drawn from
+41 repositories, including commercial codebases, explicitly targeting
+enterprise-level complexity beyond the original SWE-bench.  These
+long-horizon tasks --- often requiring multi-file patches and hours of
+professional developer effort --- directly motivate KISS Sorcar's
+continuation mechanism.  \citet{prathifkumar2025swebenchverified}
+raise the important question of benchmark contamination, showing that
+overlap between SWE-Bench-Verified problems and LLM training data may
+inflate scores, suggesting that high benchmark numbers may partly
+reflect memorization rather than genuine problem-solving ability.
+\citet{horikawa2025agentic} provide an empirical study of how
+AI coding agents handle refactoring tasks, finding that while agents
+can plan and execute complex refactorings, they still struggle with
+cross-file dependency analysis --- a challenge that KISS Sorcar's
+sub-agent parallelism partially addresses.
+
+\textbf{Self-improvement and test-time scaling.}
+\citet{robeyns2025selfimproving} demonstrate a self-improving coding
+agent that iteratively refines its own scaffolding code, achieving
+dramatic benchmark improvements through self-generated optimizations.
+KISS Sorcar's self-improvement loop (via \texttt{USER\_PREFS.md})
+captures a lighter-weight form of this idea: rather than rewriting its
+own code, the agent accumulates learned user preferences and project
+invariants across sessions.  \citet{gao2025trae} introduce the Trae
+Agent, which applies test-time compute scaling to software engineering,
+dynamically allocating more inference budget to harder problems.  KISS
+Sorcar's budget-tracking mechanism provides a complementary
+perspective: rather than scaling compute adaptively, it enforces hard
+budget ceilings while the Relentless Agent ensures maximum progress
+within those bounds.
+
 %----------------------------------------------------------------------
 \section{Conclusion}
 \label{sec:conclusion}
@@ -1068,6 +1127,63 @@ Chen, Z., Tang, J., Chen, X., Lin, Y., Zhao, W.~X., Wei, Z., and
 Wen, J.
 \newblock A survey on large language model based autonomous agents.
 \newblock {\em Frontiers of Computer Science}, 18(6):186345, 2024.
+
+\bibitem[Hassan et~al.(2025)]{hassan2025agentic}
+Hassan, A.~E., Li, H., Lin, D., and Adams, B.
+\newblock Agentic software engineering: Foundational pillars and a
+  research roadmap.
+\newblock {\em arXiv preprint arXiv:2509.06216}, 2025.
+
+\bibitem[Li et~al.(2025)]{li2025rise}
+Li, H., Zhang, H., and Hassan, A.~E.
+\newblock The rise of {AI} teammates in software engineering ({SE}~3.0):
+  How autonomous coding agents are reshaping software engineering.
+\newblock {\em arXiv preprint arXiv:2507.15003}, 2025.
+
+\bibitem[Deng et~al.(2025)]{deng2025swebenchpro}
+Deng, X., Da, J., Pan, E., He, Y.~Y., Ide, C., Garg, K.,
+Lauffer, N., Park, A., Pasari, N., Rane, C., et~al.
+\newblock {SWE-Bench Pro}: Can {AI} agents solve long-horizon software
+  engineering tasks?
+\newblock {\em arXiv preprint arXiv:2509.16941}, 2025.
+
+\bibitem[Prathifkumar et~al.(2025)]{prathifkumar2025swebenchverified}
+Prathifkumar, T., Mathews, N.~S., and Nagappan, M.
+\newblock Does {SWE-Bench-Verified} test agent ability or model memory?
+\newblock {\em arXiv preprint arXiv:2512.10218}, 2025.
+
+\bibitem[Horikawa et~al.(2025)]{horikawa2025agentic}
+Horikawa, K., Li, H., Kashiwa, Y., and Adams, B.
+\newblock Agentic refactoring: An empirical study of {AI} coding agents.
+\newblock {\em arXiv preprint arXiv:2511.04824}, 2025.
+
+\bibitem[Wang et~al.(2025)]{wang2025agentic}
+Wang, H., Gong, J., Zhang, H., Xu, J., and Wang, J.
+\newblock {AI} agentic programming: A survey of techniques, challenges,
+  and opportunities.
+\newblock {\em arXiv preprint arXiv:2508.11126}, 2025.
+
+\bibitem[Chatlatanagulchai et~al.(2025)]{chatlatanagulchai2025readmes}
+Chatlatanagulchai, W., Li, H., Kashiwa, Y., and Reid, B.
+\newblock Agent {README}s: An empirical study of context files for
+  agentic coding.
+\newblock {\em arXiv preprint arXiv:2511.12884}, 2025.
+
+\bibitem[Mohsenimofidi et~al.(2025)]{mohsenimofidi2025context}
+Mohsenimofidi, S., Galster, M., and Treude, C.
+\newblock Context engineering for {AI} agents in open-source software.
+\newblock {\em arXiv preprint arXiv:2510.21413}, 2025.
+
+\bibitem[Robeyns et~al.(2025)]{robeyns2025selfimproving}
+Robeyns, M., Szummer, M., and Aitchison, L.
+\newblock A self-improving coding agent.
+\newblock {\em arXiv preprint arXiv:2504.15228}, 2025.
+
+\bibitem[Gao et~al.(2025)]{gao2025trae}
+Gao, P., Tian, Z., Meng, X., and {Trae Research Team}.
+\newblock Trae Agent: An {LLM}-based agent for software engineering
+  with test-time scaling.
+\newblock {\em arXiv preprint arXiv:2507.23370}, 2025.
 
 \end{thebibliography}
 }
