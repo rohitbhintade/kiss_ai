@@ -635,6 +635,99 @@ Before calling finish(success=True, ...), you MUST:
 Relentless Agent's stall detection: it prevents the agent from
 declaring premature success and forces it to confront failures.
 
+%......................................................................
+\subsection{Web Research Protocol}
+%......................................................................
+
+When the agent needs external knowledge, the prompt prescribes a
+structured research workflow rather than allowing ad-hoc browsing:
+
+\begin{prompt}
+## Use web tools when you need to:
+
+- When you need to collect knowledge from the internet,
+  visit at least 100 web sites and collect ideas without
+  much thinking in a new file $PWD/tmp/ideas-{unique_id}.md.
+  Then go over $PWD/tmp/ideas-{unique_id}.md, think deeply
+  on how to complete the task at hand, and complete it.
+\end{prompt}
+
+\noindent The rationale is a two-phase separation between \emph{collection}
+and \emph{synthesis}.  LLMs tend to anchor on the first few results
+they encounter, which biases their solutions toward a narrow slice of
+the design space.  By forcing the agent to accumulate a broad set of
+ideas into a file \emph{before} reasoning about them, the protocol
+counteracts anchoring bias and encourages the model to consider
+diverse approaches.  The ``at least 100 web sites'' threshold is
+deliberately aggressive: it ensures the agent does not shortcut the
+research phase after two or three hits, and the resulting ideas file
+serves as an auditable artifact of what the agent considered.
+
+%......................................................................
+\subsection{Desktop Application Control}
+%......................................................................
+
+The agent can interact with graphical desktop applications using
+screenshots, keyboard, and mouse:
+
+\begin{prompt}
+## Launch desktop apps
+
+- Use screenshots, keyboard, and mouse to control a
+  desktop app.
+- Do not launch VS Code or its extensions.
+\end{prompt}
+
+\noindent This instruction enables the agent to operate GUI applications
+(Preview, browsers, graphical diff tools) when command-line
+alternatives are insufficient.  The explicit prohibition on launching
+VS~Code prevents a recursive loop: since the agent runs \emph{inside}
+a VS~Code extension, launching another VS~Code instance or modifying
+extension state from within the agent could corrupt the host session
+or create deadlocks.
+
+%......................................................................
+\subsection{Sorcar-Specific Overrides}
+%......................................................................
+
+A final section provides project-specific instructions that are
+injected when the agent operates on its own codebase:
+
+\begin{prompt}
+## Sorcar-specific instructions:
+
+- Use 'uv run check --full' to lint, typecheck, and format
+  code.
+- Run 'uv run pytest -v' with a timeout of 900 seconds to
+  test KISS
+- Do **NOT run all KISS tests after modifications. Only run
+  the impacted tests**
+- **Do NOT install the KISS Sorcar extension from inside
+  Sorcar**
+- If you mention a file in the chat, make the file
+  clickable so that when the user clicks, it opens in the
+  editor of VSCode
+- Read $PWD/SORCAR.md and treat its contents as
+  instructions and allow those instructions to override the
+  instructions above
+\end{prompt}
+
+\noindent These overrides serve three purposes.  First, they specify the
+exact toolchain commands for the KISS project itself (\texttt{uv run
+check -{}-full}, \texttt{uv run pytest}), eliminating guesswork about
+which linter, formatter, or test runner to use.  Second, they impose
+efficiency constraints: running the full test suite after every small
+change is wasteful when only a few modules are affected, so the agent
+is instructed to scope test execution to impacted tests.  Third, they
+prevent dangerous self-modification: just as a surgeon should not
+operate on themselves, the agent must not install or reinstall the
+VS~Code extension it is running inside, since doing so would terminate
+its own process.  The \texttt{SORCAR.md} override mechanism allows
+per-repository instructions to further customize the agent's behavior,
+forming a hierarchy: general system prompt $\rightarrow$
+Sorcar-specific instructions $\rightarrow$ repository-specific
+\texttt{SORCAR.md}.
+
 %----------------------------------------------------------------------
 \section{Related Work}
 \label{sec:related}
