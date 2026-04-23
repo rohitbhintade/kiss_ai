@@ -60,8 +60,8 @@ practical gaps: context windows are finite, a single mistake can derail
 an entire session, and generated changes are difficult to review or
 revert once applied to a live codebase.
 
-KISS Sorcar addresses these gaps through a five-layer agent hierarchy
-in which each layer adds exactly one concern:
+We address these gaps through a five-layer agent hierarchy in which
+each layer adds exactly one concern:
 
 \begin{enumerate}[nosep]
   \item \textbf{KISS Agent} --- budget-tracked ReAct loop with native
@@ -83,11 +83,11 @@ pays homage to P.~C.~Sorcar, the legendary Indian magician, evoking
 the idea of an agent that performs feats that appear magical yet are
 grounded in disciplined engineering.
 
-The system is complemented by a carefully structured system prompt that
-encodes invariants about code quality, verification discipline, and
-self-improvement.  Together, the architecture and the prompt form a
-practical AI IDE that integrates with Visual Studio Code and operates
-on real-world repositories.
+We complement the architecture with a carefully structured system
+prompt that encodes invariants about code quality, verification
+discipline, and self-improvement.  Together, the architecture and the
+prompt form a practical AI IDE that integrates with Visual Studio Code
+and operates on real-world repositories.
 
 %----------------------------------------------------------------------
 \section{Motivation and Key Design Principles}
@@ -97,36 +97,35 @@ on real-world repositories.
 \paragraph{Finite context, infinite tasks.}
 Even the largest context windows are insufficient for complex
 refactoring or multi-file bug hunts.  Rather than hoping the model
-finishes before hitting the limit, the system is designed from the
+finishes before hitting the limit, we design the system from the
 ground up to \emph{continue} across multiple sub-sessions, each with
 its own context window, while preserving a compressed summary of prior
 progress.
 
 \paragraph{Budget accountability.}
-Every API call costs money.  The agent tracks input tokens, output
-tokens, cache hits, and cache writes at every step, computes a running
-dollar cost, and enforces per-task and global budget ceilings.  If the
-budget is exceeded, the agent raises a hard error rather than silently
+Every API call costs money.  We track input tokens, output tokens,
+cache hits, and cache writes at every step, compute a running dollar
+cost, and enforce per-task and global budget ceilings.  If the agent
+exceeds the budget, it raises a hard error rather than silently
 accumulating charges.
 
 \paragraph{Safe-by-default code changes.}
 Applying AI-generated changes directly to a developer's working tree
 is risky: a bad edit can break a build, and reverting requires manual
-git archaeology.  The worktree layer eliminates this risk entirely by
-running every task on a disposable git branch in a separate worktree
+git archaeology.  We eliminate this risk entirely with the worktree layer, which runs
+every task on a disposable git branch in a separate worktree
 directory.  The developer reviews changes and explicitly chooses to
 merge or discard.
 
 \paragraph{No mocks, no fakes, real integration tests.}
-The system's own test suite enforces a strict policy: tests must
-exercise actual behavior, not mocked approximations.  This philosophy
-extends to the agent's instructions --- when the agent writes tests
-for user code, it is instructed to avoid mocks and achieve full branch
-coverage.
+Our test suite enforces a strict policy: tests must exercise actual
+behavior, not mocked approximations.  This philosophy extends to the
+agent's instructions --- when the agent writes tests for user code, we
+instruct it to avoid mocks and achieve full branch coverage.
 
 \paragraph{Relentless execution.}
-The system is designed to be \emph{relentless}: it does not give up
-when a sub-session fails.  Instead, it summarizes what happened,
+We design the system to be \emph{relentless}: it does not give up
+when a sub-session fails.  Instead, it summarizes what happened and
 continues with a fresh strategy informed by a summary of all prior
 attempts.
 
@@ -147,7 +146,7 @@ The KISS Agent is the innermost execution unit.  It implements a
 standard ReAct loop~\citep{yao2023react} with the following
 characteristics:
 
-\textbf{Native function calling.}  Tools are registered as ordinary
+\textbf{Native function calling.}  We register tools as ordinary
 Python callables.  The agent builds an OpenAI-compatible tool schema
 once at setup time and caches it, avoiding redundant schema
 construction on every LLM call.  A special \texttt{finish} tool
@@ -160,11 +159,11 @@ local budget counter and a global (cross-agent) budget counter
 protected by a class-level lock.  The agent checks three limits before
 each step: per-agent budget, global budget, and maximum step count.
 
-\textbf{Error resilience.}  Transient API errors (rate limits, server
-errors) are retried up to a configurable threshold of consecutive
-failures.  Non-retryable errors (authentication failures, permission
-denials) are detected by matching error type names and message
-substrings, and are raised immediately.
+\textbf{Error resilience.}  The agent retries transient API errors
+(rate limits, server errors) up to a configurable threshold of
+consecutive failures.  It detects non-retryable errors (authentication
+failures, permission denials) by matching error type names and message
+substrings, and raises them immediately.
 
 \textbf{Non-agentic mode.}  When tools are not needed, the agent can
 run a single generation without the ReAct loop, which is useful for
@@ -227,7 +226,7 @@ The trajectory of the agent is stored in the file: {trajectory_file}
 \end{prompt}
 
 \noindent To force the agent to self-continue before hitting the step limit,
-the system prompt is augmented with an instruction that fires near the
+we augment the system prompt with an instruction that fires near the
 end of the budget:
 
 \begin{prompt}
@@ -244,8 +243,8 @@ end of the budget:
   process.
 \end{prompt}
 
-\textbf{Budget aggregation.}  Token counts and dollar costs are
-accumulated across all sub-sessions.  Each new sub-session receives
+\textbf{Budget aggregation.}  We accumulate token counts and dollar
+costs across all sub-sessions.  Each new sub-session receives
 offsets so that the usage display shown to the user reflects the true
 cumulative cost, not just the cost of the current sub-session.
 
@@ -257,7 +256,7 @@ cumulative cost, not just the cost of the current sub-session.
 The Sorcar Agent adds the tools that make the system useful for
 software development and general-purpose automation.
 
-\textbf{Coding tools.}  Four core tools are provided: a shell command
+\textbf{Coding tools.}  We provide four core tools: a shell command
 executor with streaming output, a file reader, a precise string-based
 file editor, and a file writer.  The shell executor supports a
 configurable timeout, streams output to the user interface in real
@@ -274,16 +273,16 @@ deployed applications, and interact with web-based tools.
 spawns independent Sorcar Agent instances in a thread pool.  Each
 sub-agent gets its own LLM context and tool set.  This is useful for
 embarrassingly parallel tasks such as summarizing multiple files or
-researching independent topics.  The results are collected and
-returned in input order.
+researching independent topics.  We collect the results and return
+them in input order.
 
 \textbf{User interaction.}  An ask-user-question tool allows the agent
 to pause execution and request clarification from the user.  In the
 VS~Code integration, this renders as a text input in the sidebar; in
 CLI mode, it reads from standard input.
 
-\textbf{Docker isolation.}  When a Docker image is specified, the
-coding tools are replaced with Docker-aware variants that execute
+\textbf{Docker isolation.}  When a Docker image is specified, we
+replace the coding tools with Docker-aware variants that execute
 commands inside a container, providing an additional layer of
 sandboxing for untrusted tasks.
 
@@ -294,7 +293,7 @@ sandboxing for untrusted tasks.
 
 The Chat Sorcar Agent adds multi-turn conversation persistence.
 
-\textbf{Chat sessions.}  Each task is assigned to a chat session
+\textbf{Chat sessions.}  We assign each task to a chat session
 identified by a stable chat ID.  The agent persists tasks and their
 results to a local database.  When a new task arrives within the same
 chat session, the agent loads all prior tasks and results and prepends
@@ -333,16 +332,15 @@ remains untouched.
 has uncommitted changes, the agent copies them into the worktree and
 creates a baseline commit.  This ensures the agent sees the same state
 the user sees, while keeping the user's actual index and working tree
-clean.  During merge, the system uses cherry-pick from the baseline
+clean.  During merge, we use cherry-pick from the baseline
 commit to replay only the agent's changes, excluding the
 dirty-state snapshot.
 
 \textbf{Auto-commit and auto-merge.}  When the user starts a new task
-or a new chat, any pending worktree from a previous task is
-automatically committed with an LLM-generated commit message and
-squash-merged into the original branch.  If the merge has conflicts,
-the branch is preserved and the user receives instructions for manual
-resolution.
+or a new chat, we automatically commit any pending worktree from a
+previous task with an LLM-generated commit message and squash-merge it
+into the original branch.  If the merge has conflicts, we preserve the
+branch and provide the user with instructions for manual resolution.
 
 \textbf{Concurrency safety.}  A per-repository file lock serializes
 the checkout, stash, merge, and pop sequence so that concurrent tabs
@@ -351,7 +349,7 @@ Thread-local storage isolates per-task state (stream parsing buffers,
 bash output buffers, recording state) so that stopping one task does
 not corrupt another.
 
-\textbf{Crash recovery.}  All worktree state is stored in git itself
+\textbf{Crash recovery.}  We store all worktree state in git itself
 (branch names, git config entries) rather than in sidecar files.  On
 process restart, the agent queries git for any pending
 branch matching its chat ID prefix and reconstructs all instance
@@ -435,7 +433,7 @@ LLM-based agents:
 \subsection{Identity and Tool Rules}
 %......................................................................
 
-The agent is given a concrete identity (name, developer, repository
+We give the agent a concrete identity (name, developer, repository
 URL) rather than a vague persona.  Tool usage rules are explicit and
 mechanical:
 
@@ -567,7 +565,7 @@ to create and share rich reports, visualizations, or documentation.
 \subsection{Pre-flight Checks}
 %......................................................................
 
-Before modifying any file, the agent is instructed to read it first:
+Before modifying any file, we instruct the agent to read it first:
 
 \begin{prompt}
 ## Pre-flight Checks
@@ -1126,8 +1124,9 @@ exact toolchain commands for the KISS project itself (\texttt{uv run
 check -{}-full}, \texttt{uv run pytest}), eliminating guesswork about
 which linter, formatter, or test runner to use.  Second, they impose
 efficiency constraints: running the full test suite after every small
-change is wasteful when only a few modules are affected, so the agent
-is instructed to scope test execution to impacted tests.  Third, they
+change is wasteful when only a few modules are affected, so we
+instruct the agent to scope test execution to impacted tests.  Third,
+they
 prevent dangerous self-modification: just as a surgeon should not
 operate on themselves, the agent must not install or reinstall the
 VS~Code extension it is running inside, since doing so would terminate
@@ -1155,16 +1154,16 @@ industrial product marketed as ``the first AI software engineer,''
 operates in a sandboxed environment with shell, browser, and editor
 access.  Aider~\citep{aider2023} provides a terminal-based pair
 programming interface with tight git integration, automatically
-committing each change.  KISS Sorcar's Relentless Agent layer
-addresses the single-session limitation shared by most of these
-systems, while its worktree isolation provides stronger safety
-guarantees than per-change commits.
+committing each change.  Our Relentless Agent layer addresses the
+single-session limitation shared by most of these systems, while our
+worktree isolation provides stronger safety guarantees than per-change
+commits.
 
 \textbf{ReAct and tool use.}
 The ReAct framework~\citep{yao2023react} interleaves reasoning and
 action.  Toolformer~\citep{schick2023toolformer} teaches models to use
-tools via self-supervised learning.  KISS Sorcar uses native function
-calling provided by modern LLM APIs rather than in-context tool
+tools via self-supervised learning.  We use native function calling
+provided by modern LLM APIs rather than in-context tool
 descriptions, which reduces prompt overhead and improves reliability.
 
 \textbf{Reasoning and planning.}
@@ -1174,10 +1173,10 @@ on complex tasks.  Tree of Thoughts~\citep{yao2024tree} generalizes
 this to deliberate search over multiple reasoning paths.
 Reflexion~\citep{shinn2023reflexion} introduces verbal reinforcement
 learning, where an agent reflects on failed attempts and produces
-self-critiques that improve subsequent trials.  KISS Sorcar's
-continuation protocol is conceptually related to Reflexion: failed
-sub-sessions produce summaries that inform subsequent attempts.
-However, KISS Sorcar operates at the level of full software
+self-critiques that improve subsequent trials.  Our continuation
+protocol is conceptually related to Reflexion: failed sub-sessions
+produce summaries that inform subsequent attempts.  However, we
+operate at the level of full software
 engineering tasks rather than isolated reasoning problems, and its
 budget and step limits provide principled termination criteria.
 
@@ -1191,8 +1190,8 @@ coordinate specialized agents.
 AutoGen~\citep{wu2023autogen} provides a general-purpose framework
 for multi-agent conversation, enabling flexible topologies beyond
 fixed pipelines.  These systems focus on generating entire
-applications from scratch.  KISS Sorcar takes a different approach:
-rather than simulating an organization of specialists, it uses a
+applications from scratch.  We take a different approach: rather than
+simulating an organization of specialists, we use a
 single agent with broad tool access and optional parallel sub-agents
 for embarrassingly parallel sub-tasks, prioritizing practical utility
 on real-world codebases over role-playing fidelity.
@@ -1200,12 +1199,11 @@ on real-world codebases over role-playing fidelity.
 \textbf{Multi-turn autonomous agents.}
 AutoGPT~\citep{autogpt2023} and BabyAGI~\citep{babyagi2023} implement
 multi-step autonomous agents.  These systems typically lack budget
-controls and safe code isolation.  KISS Sorcar's
-layered architecture addresses each of these concerns in a dedicated
-layer.
+controls and safe code isolation.  Our layered architecture addresses
+each of these concerns in a dedicated layer.
 
 \textbf{Code-specialized language models.}
-Beyond the general-purpose LLMs that KISS Sorcar can use as backends,
+Beyond the general-purpose LLMs that our system can use as backends,
 a rich line of work has produced models specifically trained for code.
 Code Llama~\citep{roziere2023code} fine-tunes Llama~2 for code
 generation and infilling.
@@ -1213,7 +1211,7 @@ StarCoder~\citep{li2023starcoder} trains on permissively licensed code
 from GitHub with a fill-in-the-middle objective.
 DeepSeek-Coder~\citep{guo2024deepseek} trains on a 2-trillion-token
 corpus of code and natural language with a repository-level
-context window.  KISS Sorcar is model-agnostic and can leverage any of
+context window.  Our system is model-agnostic and can leverage any of
 these models through its pluggable LLM backend, benefiting from
 advances in code-specialized pre-training without architectural
 changes.
@@ -1227,7 +1225,7 @@ capabilities in software engineering.
 HumanEval~\citep{chen2021evaluating} and
 MBPP~\citep{austin2021program} evaluate function-level code generation
 from docstrings.  These benchmarks focus on isolated coding problems;
-KISS Sorcar targets the broader workflow of multi-file, multi-step
+We target the broader workflow of multi-file, multi-step
 software engineering tasks that require tool use, testing, and version
 control.
 
@@ -1235,8 +1233,8 @@ control.
 LangChain~\citep{langchain2022} provides modular abstractions for
 building LLM applications, including agent loops, tool integration,
 and memory.  It focuses on composability and breadth of integrations
-rather than on the specific concerns of software development.  KISS
-Sorcar's architecture is purpose-built for software engineering, with
+rather than on the specific concerns of software development.  Our
+architecture is purpose-built for software engineering, with
 each layer addressing a specific practical concern (budget tracking,
 continuation, code safety) rather than providing general-purpose
 primitives.
@@ -1250,8 +1248,8 @@ and action (tool use) --- and catalog applications across social
 science, natural science, and engineering.
 \citet{wang2024survey} propose a systematic framework for autonomous
 agents built on LLMs, covering profile, memory, planning, and action
-modules.  KISS Sorcar can be understood through the lens of these
-frameworks: its KISS Agent implements the action loop, the Relentless
+modules.  Our system can be understood through the lens of these
+frameworks: the KISS Agent implements the action loop, the Relentless
 Agent addresses the memory and planning concerns through continuation
 summaries, and the system prompt encodes the profile.
 
@@ -1259,7 +1257,7 @@ summaries, and the system prompt encodes the profile.
 GitHub Copilot~\citep{copilot2021}, Cursor~\citep{cursor2024}, and
 Windsurf~\citep{windsurf2024} provide AI assistance within editors.
 These tools typically operate at the level of code completion or
-single-turn chat.  KISS Sorcar operates at the level of autonomous
+single-turn chat.  We operate at the level of autonomous
 multi-step task execution with full tool access and git-level
 isolation.
 
@@ -1271,10 +1269,9 @@ roadmap that emphasizes trust, controllability, and goal-oriented task
 decomposition.  \citet{li2025rise} survey the landscape of autonomous
 coding agents and characterize the transition from assistive code
 completion to full-fledged AI teammates that initiate, plan, and
-execute development tasks.  KISS Sorcar instantiates several of the
-principles advocated in these roadmaps, including layered
-controllability (via budget tracking and step limits) and safe isolation
-(via worktrees).
+execute development tasks.  We instantiate several of the principles
+advocated in these roadmaps, including layered controllability (via
+budget tracking and step limits) and safe isolation (via worktrees).
 
 \citet{wang2025agentic} provide a comprehensive survey of AI agentic
 programming techniques, cataloging how LLM-based agents decompose
@@ -1283,7 +1280,7 @@ self-correct through feedback loops.
 \citet{chatlatanagulchai2025readmes} study \emph{agent context files}
 --- persistent, project-level instruction files that guide agentic
 coding tools --- and find that high-quality context files significantly
-improve agent performance.  KISS Sorcar's layered system prompt and
+improve agent performance.  Our layered system prompt and
 \texttt{SORCAR.md} override mechanism are instances of this pattern.
 \citet{mohsenimofidi2025context} further investigate context
 engineering for AI agents in open-source software, highlighting how
@@ -1295,8 +1292,8 @@ more challenging benchmark with 1,865 long-horizon problems drawn from
 41 repositories, including commercial codebases, explicitly targeting
 enterprise-level complexity beyond the original SWE-bench.  These
 long-horizon tasks --- often requiring multi-file patches and hours of
-professional developer effort --- directly motivate KISS Sorcar's
-continuation mechanism.  \citet{prathifkumar2025swebenchverified}
+professional developer effort --- directly motivate our continuation
+mechanism.  \citet{prathifkumar2025swebenchverified}
 raise the important question of benchmark contamination, showing that
 overlap between SWE-Bench-Verified problems and LLM training data may
 inflate scores, suggesting that high benchmark numbers may partly
@@ -1304,21 +1301,21 @@ reflect memorization rather than genuine problem-solving ability.
 \citet{horikawa2025agentic} provide an empirical study of how
 AI coding agents handle refactoring tasks, finding that while agents
 can plan and execute complex refactorings, they still struggle with
-cross-file dependency analysis --- a challenge that KISS Sorcar's
-sub-agent parallelism partially addresses.
+cross-file dependency analysis --- a challenge that our sub-agent
+parallelism partially addresses.
 
 \textbf{Self-improvement and test-time scaling.}
 \citet{robeyns2025selfimproving} demonstrate a self-improving coding
 agent that iteratively refines its own scaffolding code, achieving
 dramatic benchmark improvements through self-generated optimizations.
-KISS Sorcar's self-improvement loop (via \texttt{USER\_PREFS.md})
-captures a lighter-weight form of this idea: rather than rewriting its
-own code, the agent accumulates learned user preferences and project
+Our self-improvement loop (via \texttt{USER\_PREFS.md}) captures a
+lighter-weight form of this idea: rather than rewriting its own code,
+the agent accumulates learned user preferences and project
 invariants across sessions.  \citet{gao2025trae} introduce the Trae
 Agent, which applies test-time compute scaling to software engineering,
-dynamically allocating more inference budget to harder problems.  KISS
-Sorcar's budget-tracking mechanism provides a complementary
-perspective: rather than scaling compute adaptively, it enforces hard
+dynamically allocating more inference budget to harder problems.  Our
+budget-tracking mechanism provides a complementary perspective: rather
+than scaling compute adaptively, we enforce hard
 budget ceilings while the Relentless Agent ensures maximum progress
 within those bounds.
 
@@ -1327,25 +1324,25 @@ within those bounds.
 \label{sec:conclusion}
 %----------------------------------------------------------------------
 
-KISS Sorcar demonstrates that a layered, single-concern architecture
-can address the practical challenges of deploying LLM agents for
-real-world software development.  The KISS Agent provides a robust
-execution core with budget tracking.  The Relentless Agent eliminates
-the context-window ceiling through automatic continuation.  The Sorcar
-Agent equips the agent with the tools a
-developer actually uses.  The Chat Sorcar Agent enables multi-turn
-conversations that persist across sessions.  The Worktree Sorcar Agent
-ensures that every task is safely isolated in git, giving the
-developer full control over what gets merged.
+We have shown that a layered, single-concern architecture can address
+the practical challenges of deploying LLM agents for real-world
+software development.  The KISS Agent provides a robust execution core
+with budget tracking.  The Relentless Agent eliminates the
+context-window ceiling through automatic continuation.  The Sorcar
+Agent equips the system with the tools a developer actually uses.  The
+Chat Sorcar Agent enables multi-turn conversations that persist across
+sessions.  The Worktree Sorcar Agent ensures that every task is safely
+isolated in git, giving the developer full control over what gets
+merged.
 
-The system prompt complements the architecture by encoding engineering
-discipline directly into the agent's behavior: read before writing,
-test before fixing, plan before executing, verify before finishing.
-These are not novel insights --- they are the practices of careful
-software engineering, translated into instructions that an LLM can
-follow.
+We complement the architecture with a system prompt that encodes
+engineering discipline directly into the agent's behavior: read before
+writing, test before fixing, plan before executing, verify before
+finishing.  These are not novel insights --- they are the practices of
+careful software engineering, translated into instructions that an LLM
+can follow.
 
-The source code is publicly available at
+We make the source code publicly available at
 \url{https://github.com/ksenxx/kiss_ai}.
 
 %----------------------------------------------------------------------
