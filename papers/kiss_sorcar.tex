@@ -1137,6 +1137,183 @@ Sorcar-specific instructions $\rightarrow$ repository-specific
 \texttt{SORCAR.md}.
 
 %----------------------------------------------------------------------
+\section{VS Code Extension: Unique Features}
+\label{sec:vscode-features}
+%----------------------------------------------------------------------
+
+We ship the system as a VS~Code extension called KISS Sorcar.  While
+the underlying agent architecture (Sections~\ref{sec:architecture}
+and~\ref{sec:system-prompt}) already differs from existing AI coding
+assistants, the extension's user-facing design introduces several
+features that, to our knowledge, are not present in any competing IDE
+or assistant---including GitHub Copilot~\citep{copilot2021},
+Cursor~\citep{cursor2024}, Windsurf~\citep{windsurf2024},
+Devin~\citep{devin2024}, and Aider~\citep{aider2023}.  We enumerate
+these features below.
+
+%......................................................................
+\subsection{Git-Worktree Isolation with In-Editor Merge Review}
+\label{sec:worktree-merge}
+%......................................................................
+
+Every mainstream AI coding assistant applies changes directly to the
+user's working tree.  Copilot and Cursor insert completions or edits
+in place; Windsurf modifies files in the current branch; Aider
+auto-commits each change to the current branch.  If the AI makes a
+bad edit, the developer must manually revert or cherry-pick.
+
+Our extension never touches the user's working tree.  Every task runs
+in a disposable git worktree on its own branch
+(Section~\ref{sec:worktree-agent}).  When the task completes, we
+present a per-hunk, per-file, and whole-task merge UI directly inside
+VS~Code: the developer can accept or reject individual changes,
+navigate between hunks with dedicated commands, or accept/reject all
+changes in a file or across the entire task.  This gives the developer
+the same granularity of control as a pull-request review, but embedded
+in the editor and operating on changes the AI just produced seconds
+ago.
+
+No other assistant combines worktree-level isolation with an
+inline merge review flow.  The closest analog is Aider's per-change
+auto-commit, but that operates on the current branch and provides no
+accept/reject UI---the developer must use standard git tooling to
+inspect and revert individual commits.
+
+%......................................................................
+\subsection{Automatic Multi-Session Continuation}
+\label{sec:continuation-feature}
+%......................................................................
+
+Context windows are finite, and complex tasks---large refactorings,
+multi-file bug hunts, benchmark evaluations---routinely exceed them.
+Existing assistants handle this by either truncating the conversation
+(Copilot, Cursor) or asking the user to manually start a new session
+and re-describe the task (Windsurf, Aider).  Devin operates in a
+sandboxed environment with a single long context, but when the context
+is exhausted, the task ends.
+
+Our extension continues automatically.  The Relentless Agent
+(Section~\ref{sec:relentless-agent}) detects when the context window
+or step limit is approaching, serializes progress into a structured
+summary, and spawns a new sub-session that picks up where the previous
+one left off.  If a sub-session crashes, a separate summarizer agent
+extracts useful context from the trajectory and feeds it to the next
+attempt.  From the user's perspective, the task simply runs until it
+succeeds, regardless of how many sub-sessions are needed.
+
+%......................................................................
+\subsection{Cross-Session Self-Improvement}
+\label{sec:self-improvement-feature}
+%......................................................................
+
+Every AI assistant starts each session from scratch: the user must
+re-explain project conventions, preferred patterns, and past decisions.
+Some tools support a static configuration file (e.g.,
+\texttt{.cursorrules} for Cursor, \texttt{AGENTS.md} or
+\texttt{CLAUDE.md} for various agents), but these files must be
+written and maintained by the developer.
+
+Our extension maintains a \texttt{USER\_PREFS.md} file that the agent
+reads at the start of each task and \emph{updates} at the end.  When
+the agent discovers a new user preference or project invariant during
+task execution---a naming convention, an architectural constraint, a
+disliked pattern---it writes it to the file.  Crucially, the agent
+also resolves conflicts: if a new preference contradicts an existing
+one, the old entry is removed.  Over time, the file accumulates a
+curated set of project-specific knowledge that makes the agent
+progressively more effective without any manual configuration from the
+developer.
+
+%......................................................................
+\subsection{Real-Time Budget Accountability}
+\label{sec:budget-feature}
+%......................................................................
+
+AI coding assistants typically operate on a subscription model
+(Copilot, Cursor) or a per-seat pricing model (Devin, Windsurf) that
+obscures the per-task cost.  The developer has no visibility into how
+many tokens a task consumed or how much it cost.
+
+Our extension displays real-time cost tracking in the sidebar: input
+tokens, output tokens, cache hits, dollar cost, and elapsed time are
+updated at every agent step.  We enforce both per-task and global
+budget ceilings.  If a task exceeds its budget, the agent raises a
+hard error rather than silently accumulating charges.  This
+transparency allows developers to make informed decisions about which
+tasks to delegate to the AI and how to structure prompts for cost
+efficiency.
+
+%......................................................................
+\subsection{Multi-Tab Concurrent Tasks}
+\label{sec:multi-tab}
+%......................................................................
+
+Most AI coding assistants support only a single active task at a time.
+Copilot Chat, Cursor's agent mode, and Windsurf process one request
+before accepting the next.  Devin can run tasks in the background but
+provides a separate web interface rather than IDE-native concurrency.
+
+Our extension supports multiple concurrent tasks via a tabbed
+interface in the sidebar.  Each tab runs an independent agent instance
+with its own worktree, context window, and budget tracking.  The user
+can start a refactoring task in one tab, switch to another tab to ask
+an unrelated question, and return to find the refactoring still
+running.  Per-tab state---DOM elements, pending user questions, merge
+UI---is preserved across tab switches by detaching and re-attaching
+per-tab DOM nodes rather than serializing and restoring values.
+
+%......................................................................
+\subsection{Integrated Browser Automation}
+\label{sec:browser-feature}
+%......................................................................
+
+While some assistants can search the web (Devin, Perplexity-based
+tools), none provide full programmatic browser control from within the
+IDE.  Our extension includes a browser automation tool that allows the
+agent to navigate to URLs, read accessibility trees, click elements,
+type text, press keys, scroll, and take screenshots---all controlled
+programmatically from within a VS~Code task.  We render a live browser
+preview inside the extension's sidebar, allowing the developer to
+watch the agent interact with web applications in real time.
+
+This capability enables use cases that no other IDE assistant supports:
+verifying a deployed web application after a code change, filling out
+web forms as part of a testing workflow, scraping documentation to
+inform a code generation task, or interacting with web-based developer
+tools (CI dashboards, issue trackers) without leaving the editor.
+
+%......................................................................
+\subsection{Crash Recovery from Git State}
+\label{sec:crash-recovery}
+%......................................................................
+
+If VS~Code crashes or the user restarts the editor mid-task, most AI
+assistants lose all context: the conversation is gone, and any
+partially applied changes are left in an indeterminate state in the
+working tree.
+
+Our extension stores all worktree state in git itself---branch names,
+configuration entries, commit history---rather than in ephemeral
+sidecar files.  On process restart, the agent queries git for any
+pending branches matching its chat ID prefix and reconstructs all
+instance attributes from git config.  The user can resume reviewing
+and merging agent changes after a crash without any data loss.
+
+%......................................................................
+\subsection{Copilot Commit-Message Interception}
+\label{sec:commit-interception}
+%......................................................................
+
+VS~Code's Source Control view exposes a sparkle button that invokes
+\texttt{github.copilot.git.generateCommitMessage} to generate a
+commit message using GitHub Copilot.  Our extension registers its own
+handler for this command ID, intercepting the button so that our
+agent generates the commit message instead.  This is a minor but
+practical feature: it allows users who do not have a Copilot
+subscription to still use the sparkle button, powered by whatever
+LLM backend the extension is configured to use.
+
+%----------------------------------------------------------------------
 \section{Related Work}
 \label{sec:related}
 %----------------------------------------------------------------------
