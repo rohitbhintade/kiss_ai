@@ -736,9 +736,20 @@ Sorcar-specific instructions $\rightarrow$ repository-specific
 \textbf{Code generation agents.}
 SWE-Agent~\citep{yang2024sweagent} and
 OpenHands~\citep{wang2024openhands} provide LLM-based agents for
-software engineering tasks.  Both use a single-session execution model
-without automatic continuation.  KISS Sorcar's Relentless Agent layer
-addresses the single-session limitation directly.
+resolving software engineering tasks such as GitHub issues.  Both use
+a single-session execution model without automatic continuation.
+Agentless~\citep{xia2024agentless} takes the opposite approach,
+showing that a simple two-phase localize-then-repair pipeline without
+autonomous agent loops can achieve competitive results on
+SWE-bench~\citep{jimenez2024swebench}.  Devin~\citep{devin2024}, an
+industrial product marketed as ``the first AI software engineer,''
+operates in a sandboxed environment with shell, browser, and editor
+access.  Aider~\citep{aider2023} provides a terminal-based pair
+programming interface with tight git integration, automatically
+committing each change.  KISS Sorcar's Relentless Agent layer
+addresses the single-session limitation shared by most of these
+systems, while its worktree isolation provides stronger safety
+guarantees than per-change commits.
 
 \textbf{ReAct and tool use.}
 The ReAct framework~\citep{yao2023react} interleaves reasoning and
@@ -747,12 +758,94 @@ tools via self-supervised learning.  KISS Sorcar uses native function
 calling provided by modern LLM APIs rather than in-context tool
 descriptions, which reduces prompt overhead and improves reliability.
 
-\textbf{Multi-turn agents.}
+\textbf{Reasoning and planning.}
+Chain-of-thought prompting~\citep{wei2022chain} demonstrated that
+eliciting step-by-step reasoning dramatically improves LLM performance
+on complex tasks.  Tree of Thoughts~\citep{yao2024tree} generalizes
+this to deliberate search over multiple reasoning paths.
+Reflexion~\citep{shinn2023reflexion} introduces verbal reinforcement
+learning, where an agent reflects on failed attempts and produces
+self-critiques that improve subsequent trials.  KISS Sorcar's
+continuation protocol is conceptually related to Reflexion: failed
+sub-sessions produce summaries that inform subsequent attempts.
+However, KISS Sorcar operates at the level of full software
+engineering tasks rather than isolated reasoning problems, and its
+stall detection mechanism provides a principled termination criterion
+that Reflexion lacks.
+
+\textbf{Multi-agent software development.}
+ChatDev~\citep{qian2024chatdev} models the software development
+process as a conversation between role-playing agents (CEO, CTO,
+programmer, tester) organized in a waterfall-like pipeline.
+MetaGPT~\citep{hong2024metagpt} takes a meta-programming approach,
+encoding standard operating procedures as structured outputs that
+coordinate specialized agents.
+AutoGen~\citep{wu2023autogen} provides a general-purpose framework
+for multi-agent conversation, enabling flexible topologies beyond
+fixed pipelines.  These systems focus on generating entire
+applications from scratch.  KISS Sorcar takes a different approach:
+rather than simulating an organization of specialists, it uses a
+single agent with broad tool access and optional parallel sub-agents
+for embarrassingly parallel sub-tasks, prioritizing practical utility
+on real-world codebases over role-playing fidelity.
+
+\textbf{Multi-turn autonomous agents.}
 AutoGPT~\citep{autogpt2023} and BabyAGI~\citep{babyagi2023} implement
 multi-step autonomous agents.  These systems typically lack budget
 controls, stall detection, and safe code isolation.  KISS Sorcar's
 layered architecture addresses each of these concerns in a dedicated
 layer.
+
+\textbf{Code-specialized language models.}
+Beyond the general-purpose LLMs that KISS Sorcar can use as backends,
+a rich line of work has produced models specifically trained for code.
+Code Llama~\citep{roziere2023code} fine-tunes Llama~2 for code
+generation and infilling.
+StarCoder~\citep{li2023starcoder} trains on permissively licensed code
+from GitHub with a fill-in-the-middle objective.
+DeepSeek-Coder~\citep{guo2024deepseek} trains on a 2-trillion-token
+corpus of code and natural language with a repository-level
+context window.  KISS Sorcar is model-agnostic and can leverage any of
+these models through its pluggable LLM backend, benefiting from
+advances in code-specialized pre-training without architectural
+changes.
+
+\textbf{Software engineering benchmarks.}
+SWE-bench~\citep{jimenez2024swebench} evaluates agents on
+real-world GitHub issues drawn from popular Python repositories,
+requiring the agent to localize and fix bugs given only the issue
+description.  It has become the de facto standard for measuring agent
+capabilities in software engineering.
+HumanEval~\citep{chen2021evaluating} and
+MBPP~\citep{austin2021program} evaluate function-level code generation
+from docstrings.  These benchmarks focus on isolated coding problems;
+KISS Sorcar targets the broader workflow of multi-file, multi-step
+software engineering tasks that require tool use, testing, and version
+control.
+
+\textbf{Agent frameworks and orchestration.}
+LangChain~\citep{langchain2022} provides modular abstractions for
+building LLM applications, including agent loops, tool integration,
+and memory.  It focuses on composability and breadth of integrations
+rather than on the specific concerns of software development.  KISS
+Sorcar's architecture is purpose-built for software engineering, with
+each layer addressing a specific practical concern (budget tracking,
+continuation, code safety) rather than providing general-purpose
+primitives.
+
+\textbf{LLM agent surveys.}
+Several comprehensive surveys have mapped the rapidly growing
+landscape of LLM-based agents.
+\citet{xi2023rise} survey the design space of LLM agents along
+three dimensions --- brain (reasoning), perception (input modalities),
+and action (tool use) --- and catalog applications across social
+science, natural science, and engineering.
+\citet{wang2024survey} propose a systematic framework for autonomous
+agents built on LLMs, covering profile, memory, planning, and action
+modules.  KISS Sorcar can be understood through the lens of these
+frameworks: its KISS Agent implements the action loop, the Relentless
+Agent addresses the memory and planning concerns through continuation
+summaries, and the system prompt encodes the profile.
 
 \textbf{IDE integration.}
 GitHub Copilot~\citep{copilot2021}, Cursor~\citep{cursor2024}, and
@@ -864,6 +957,117 @@ Nakajima, Y.
 {Codeium}.
 \newblock {Windsurf}: The {AI}-powered {IDE}.
 \newblock \url{https://windsurf.com}, 2024.
+
+\bibitem[Jimenez et~al.(2024)]{jimenez2024swebench}
+Jimenez, C.~E., Yang, J., Wettig, A., Yao, S., Pei, K., Press, O.,
+and Narasimhan, K.
+\newblock {SWE-bench}: Can language models resolve real-world {GitHub}
+  issues?
+\newblock In {\em International Conference on Learning
+  Representations (ICLR)}, 2024.
+
+\bibitem[Xia et~al.(2024)]{xia2024agentless}
+Xia, C.~S., Deng, Y., Dunn, S., and Zhang, L.
+\newblock Agentless: Demystifying {LLM}-based software engineering
+  agents.
+\newblock {\em arXiv preprint arXiv:2407.01489}, 2024.
+
+\bibitem[{Cognition Labs}(2024)]{devin2024}
+{Cognition Labs}.
+\newblock {Devin}: The first {AI} software engineer.
+\newblock \url{https://devin.ai}, 2024.
+
+\bibitem[Gauthier(2023)]{aider2023}
+Gauthier, P.
+\newblock {Aider}: {AI} pair programming in your terminal.
+\newblock \url{https://github.com/paul-gauthier/aider}, 2023.
+
+\bibitem[Wei et~al.(2022)]{wei2022chain}
+Wei, J., Wang, X., Schuurmans, D., Bosma, M., Ichter, B., Xia, F.,
+Chi, E., Le, Q., and Zhou, D.
+\newblock Chain-of-thought prompting elicits reasoning in large
+  language models.
+\newblock In {\em Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2022.
+
+\bibitem[Yao et~al.(2024)]{yao2024tree}
+Yao, S., Yu, D., Zhao, J., Shafran, I., Griffiths, T.~L.,
+Cao, Y., and Narasimhan, K.
+\newblock Tree of thoughts: Deliberate problem solving with large
+  language models.
+\newblock In {\em Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2024.
+
+\bibitem[Shinn et~al.(2023)]{shinn2023reflexion}
+Shinn, N., Cassano, F., Gopinath, A., Narasimhan, K., and Yao, S.
+\newblock Reflexion: Language agents with verbal reinforcement
+  learning.
+\newblock In {\em Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2023.
+
+\bibitem[Qian et~al.(2024)]{qian2024chatdev}
+Qian, C., Liu, W., Liu, H., Chen, N., Dang, Y., Li, J., Yang, C.,
+Chen, W., Su, Y., Cong, X., Xu, J., Li, D., Liu, Z., and Sun, M.
+\newblock {ChatDev}: Communicative agents for software development.
+\newblock In {\em Proceedings of the 62nd Annual Meeting of the
+  Association for Computational Linguistics (ACL)}, 2024.
+
+\bibitem[Hong et~al.(2024)]{hong2024metagpt}
+Hong, S., Zhuge, M., Chen, J., Zheng, X., Cheng, Y., Zhang, C.,
+Wang, J., Wang, Z., Yau, S.~K.~S., Lin, Z., Zhou, L., Ran, C.,
+Xiao, L., Wu, C., and Schmidhuber, J.
+\newblock {MetaGPT}: Meta programming for a multi-agent collaborative
+  framework.
+\newblock In {\em International Conference on Learning
+  Representations (ICLR)}, 2024.
+
+\bibitem[Wu et~al.(2023)]{wu2023autogen}
+Wu, Q., Bansal, G., Zhang, J., Wu, Y., Li, B., Zhu, E., Jiang, L.,
+Zhang, X., Zhang, S., Liu, J., Awadallah, A.~H., White, R.~W.,
+Burger, D., and Wang, C.
+\newblock {AutoGen}: Enabling next-gen {LLM} applications via
+  multi-agent conversation.
+\newblock {\em arXiv preprint arXiv:2308.08155}, 2023.
+
+\bibitem[Li et~al.(2023)]{li2023starcoder}
+Li, R., Allal, L.~B., Zi, Y., Muennighoff, N., Kocetkov, D.,
+Mou, C., Marone, M., Akiki, C., Li, J., Chim, J., et~al.
+\newblock {StarCoder}: May the source be with you!
+\newblock {\em Transactions on Machine Learning Research (TMLR)},
+  2023.
+
+\bibitem[Guo et~al.(2024)]{guo2024deepseek}
+Guo, D., Zhu, Q., Yang, D., Xie, Z., Dong, K., Zhang, W.,
+Chen, G., Bi, X., Wu, Y., Li, Y.~K., Luo, F., Xiong, Y., and
+Liang, W.
+\newblock {DeepSeek-Coder}: When the large language model meets
+  programming --- the rise of code intelligence.
+\newblock {\em arXiv preprint arXiv:2401.14196}, 2024.
+
+\bibitem[Austin et~al.(2021)]{austin2021program}
+Austin, J., Odena, A., Nye, M., Bosma, M., Michalewski, H.,
+Dohan, D., Jiang, E., Cai, C., Terry, M., Le, Q., and Sutton, C.
+\newblock Program synthesis with large language models.
+\newblock {\em arXiv preprint arXiv:2108.07732}, 2021.
+
+\bibitem[{LangChain}(2022)]{langchain2022}
+{LangChain}.
+\newblock {LangChain}: Build context-aware reasoning applications.
+\newblock \url{https://github.com/langchain-ai/langchain}, 2022.
+
+\bibitem[Xi et~al.(2023)]{xi2023rise}
+Xi, Z., Chen, W., Guo, X., He, W., Ding, Y., Hong, B., Zhang, M.,
+Wang, J., Jin, S., Zhou, E., et~al.
+\newblock The rise and potential of large language model based agents:
+  A survey.
+\newblock {\em arXiv preprint arXiv:2309.07864}, 2023.
+
+\bibitem[Wang et~al.(2024b)]{wang2024survey}
+Wang, L., Ma, C., Feng, X., Zhang, Z., Yang, H., Zhang, J.,
+Chen, Z., Tang, J., Chen, X., Lin, Y., Zhao, W.~X., Wei, Z., and
+Wen, J.
+\newblock A survey on large language model based autonomous agents.
+\newblock {\em Frontiers of Computer Science}, 18(6):186345, 2024.
 
 \end{thebibliography}
 }
