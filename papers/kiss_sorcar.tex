@@ -526,9 +526,14 @@ official leaderboard submission.  Several observations stand out:
     total cost for the 442-trial run was approximately \$323.
   \item \textbf{Leaderboard context.}  Anthropic has noted on social
     media that approximately 81\% represents the feasibility ceiling
-    for Terminal Bench~2.0.  Recent analysis has also shown that
-    several top-scoring agents on the leaderboard employ
-    benchmark-specific optimizations that inflate their scores.
+    for Terminal Bench~2.0.  Recent analysis has found widespread
+    cheating on popular agent benchmarks, including Terminal
+    Bench~2.0: the top three submissions commit harness-level cheating
+    (e.g.\ leaking verifier code or answer keys into the agent's
+    environment), and task-level cheating (e.g.\ Googling answers,
+    mining git history, hardcoding test outputs) affects 28+
+    submissions across 9
+    benchmarks~\citep{stein2026cheatingblog,stein2026detecting}.
 \end{itemize}
 
 
@@ -1979,6 +1984,16 @@ Gao, P., Tian, Z., Meng, X., and {Trae Research Team}.
 {GetShitDone}.
 \newblock {GetShitDone}: Prompt engineering for coding agents.
 \newblock \url{https://github.com/alexnodejs/get-shit-done}, 2025.
+
+\bibitem[Stein et~al.(2026a)]{stein2026cheatingblog}
+Stein, A., Brown, D., Hassani, H., Naik, M., and Wong, E.
+\newblock Finding widespread cheating on popular agent benchmarks.
+\newblock Blog post, \url{https://debugml.github.io/cheating-agents/}, 2026.
+
+\bibitem[Stein et~al.(2026b)]{stein2026detecting}
+Stein, A., Brown, D., Hassani, H., Naik, M., and Wong, E.
+\newblock Detecting safety violations across many agent traces.
+\newblock {\em arXiv preprint arXiv:2604.11806}, 2026.
 
 \end{thebibliography}
 }
