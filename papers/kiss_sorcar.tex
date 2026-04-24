@@ -43,10 +43,10 @@ working tree is never modified.  We describe the design of each layer,
 the structured system prompt that governs agent behavior, and the
 engineering decisions that make the system practical for real-world
 software development.  On Terminal Bench~2.0 (89 diverse
-terminal-based tasks, Claude Opus~4.6), we achieve a 62.1\% overall
-pass rate and 75.3\% pass@any over 4~trials, comparing favorably to
+terminal-based tasks, Claude Opus~4.6), we achieve a 62.7\% overall
+pass rate and 78.7\% pass@any over 5~trials, comparing favorably to
 Claude~Code (58\%) and Cursor (62\%) on the same benchmark at a median
-cost of \$0.40 per task.
+cost of \$0.45 per task.
 \end{abstract}
 
 %----------------------------------------------------------------------
@@ -126,8 +126,8 @@ Agent 120~lines, and the Worktree Sorcar Agent 692~lines---a total
 of roughly 1,500~lines of code (excluding empty lines and comments).
 
 \paragraph{Evaluation.}
-We evaluate on Terminal Bench~2.0 and achieve a 62.1\% overall pass
-rate (75.3\% pass@any over 4~trials) using Claude Opus~4.6, comparing
+We evaluate on Terminal Bench~2.0 and achieve a 62.7\% overall pass
+rate (78.7\% pass@any over 5~trials) using Claude Opus~4.6, comparing
 favorably to Claude~Code (58\%) and Cursor (62\%) on the same
 benchmark (Section~\ref{sec:evaluation}).
 
@@ -1355,7 +1355,7 @@ subscription to still use the sparkle button, powered by whatever
 LLM backend the extension is configured to use.
 
 %----------------------------------------------------------------------
-\section{Preliminary Evaluation on Terminal Bench~2.0}
+\section{Evaluation on Terminal Bench~2.0}
 \label{sec:evaluation}
 %----------------------------------------------------------------------
 
@@ -1372,13 +1372,14 @@ underlying LLM.
 
 \subsection{Setup}
 
-We run 4 independent trials per task (totaling 330 scored trials after
-excluding 3 that produced no verifier output).  The agent is
-\texttt{SorcarHarborAgent}, a thin Harbor adapter that installs and
-invokes the sorcar CLI inside each container.  We hard-skip 9 tasks
-that we verified to be infeasible for Opus~4.6 across 6+ prior
-attempts (e.g.\ CompCert compilation, Windows~3.11 GUI installation,
-video OCR).  Skipped tasks still count as failures.
+We run 5 independent trials per task (totaling 442 scored trials after
+excluding 3 that produced no verifier output due to verifier
+timeouts).  The agent is \texttt{SorcarHarborAgent}, a thin Harbor
+adapter that installs and invokes the sorcar CLI inside each
+container.  We hard-skip 9 tasks that we verified to be infeasible for
+Opus~4.6 across 6+ prior attempts (e.g.\ CompCert compilation,
+Windows~3.11 GUI installation, video OCR).  Skipped tasks still count
+as failures.
 
 \subsection{Aggregate Results}
 
@@ -1386,29 +1387,29 @@ Table~\ref{tab:tb2-aggregate} summarizes the aggregate statistics.
 
 \begin{table}[h]
 \centering
-\caption{Terminal Bench~2.0 aggregate results (89 tasks, 4 trials each, Claude Opus~4.6).}
+\caption{Terminal Bench~2.0 aggregate results (89 tasks, 5 trials each, Claude Opus~4.6).}
 \label{tab:tb2-aggregate}
 \begin{tabular}{lr}
 \toprule
 \textbf{Metric} & \textbf{Value} \\
 \midrule
 Total tasks              & 89 \\
-Total scored trials      & 330 \\
-Overall pass rate        & 62.1\% (205/330) \\
-pass@any (at least 1/4 passes) & 75.3\% (67/89) \\
-pass@all (all 4 pass)    & 42.7\% (38/89) \\
-Always-fail tasks        & 22 \\
-Always-pass tasks        & 38 \\
-Mixed-result tasks       & 29 \\
-Median cost per trial    & \$0.40 \\
-Mean cost per trial      & \$0.91 \\
+Total scored trials      & 442 \\
+Overall pass rate        & 62.7\% (277/442) \\
+pass@any (at least 1/5 passes) & 78.7\% (70/89) \\
+pass@all (all 5 pass)    & 43.8\% (39/89) \\
+Always-fail tasks        & 19 \\
+Always-pass tasks        & 39 \\
+Mixed-result tasks       & 31 \\
+Median cost per trial    & \$0.45 \\
+Mean cost per trial      & \$0.90 \\
 Median duration per trial & 202\,s \\
-Mean duration per trial  & 467\,s \\
+Mean duration per trial  & 446\,s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The 62.1\% overall pass rate compares favorably to other agents
+The 62.7\% overall pass rate compares favorably to other agents
 using the same underlying model: at the time of writing, Claude~Code
 (also Opus~4.6) scores approximately 58\% on the Terminal Bench~2.0
 leaderboard, and the Cursor agent---which uses a custom fine-tuned
@@ -1419,40 +1420,41 @@ meaningfully beyond what the base model provides.
 
 \subsection{Task-Level Breakdown}
 
-\textbf{Consistently solved tasks (38 of 89).}
-These include cryptanalysis (FEAL linear and differential), git
-operations (multi-branch merge, leak recovery), server configuration
+\textbf{Consistently solved tasks (39 of 89).}
+These include cryptanalysis (FEAL differential), game-playing
+(chess best move), git operations (leak recovery), server configuration
 (gRPC key-value store, PyPI server, NGINX logging), data processing
-(resharding, large-scale text editing), formal verification
-(Coq~\texttt{plus\_comm}), and ML inference (HuggingFace model serving,
-LLM batching scheduler).  The breadth of this set---spanning systems,
-security, data engineering, and formal methods---demonstrates that the
-agent's generality is not limited to a single domain.
+(resharding), formal verification (Coq~\texttt{plus\_comm}), ML
+inference (HuggingFace model serving, LLM batching scheduler), and
+system emulation (QEMU startup).  The breadth of this set---spanning
+systems, security, data engineering, and formal methods---demonstrates
+that the agent's generality is not limited to a single domain.
 
-\textbf{Consistently failed tasks (22 of 89).}
+\textbf{Consistently failed tasks (19 of 89).}
 The failures cluster into three categories: (1)~tasks requiring
 graphical or multimedia capabilities unavailable in the container
-(video processing, Windows~3.11 GUI, MTEB leaderboard scraping),
-(2)~tasks demanding very long or resource-intensive builds that exceed
-the container's time or memory limits (CompCert, Doom for MIPS, Caffe
-CIFAR-10, training fastText on Yelp data), and (3)~tasks with niche
-domain-specific requirements that the model struggles to satisfy
-(DNA assembly, OCaml GC patching, polyglot C/Rust binaries).
+(video processing, Windows~3.11 GUI, MTEB leaderboard scraping,
+extracting moves from video), (2)~tasks demanding very long or
+resource-intensive builds that exceed the container's time or memory
+limits (CompCert, Doom for MIPS, Caffe CIFAR-10, training fastText on
+Yelp data), and (3)~tasks with niche domain-specific requirements that
+the model struggles to satisfy (DNA insertion, OCaml GC patching,
+polyglot C/Python binaries, protein assembly, cell segmentation).
 
-\textbf{Mixed-result tasks (29 of 89).}
-Tasks such as \texttt{chess-best-move} (3/4), \texttt{write-compressor}
-(3/4), and \texttt{qemu-startup} (3/4) succeed in most trials but
-occasionally fail due to non-determinism in the model's reasoning or
-timing-sensitive environment interactions.  Conversely,
-\texttt{configure-git-webserver} (1/4) and \texttt{protein-assembly}
-(1/4) succeed rarely, suggesting they are at the boundary of the
+\textbf{Mixed-result tasks (31 of 89).}
+Tasks such as \texttt{write-compressor} (3/5),
+\texttt{crack-7z-hash} (4/5), and \texttt{feal-linear-cryptanalysis}
+(4/5) succeed in most trials but occasionally fail due to
+non-determinism in the model's reasoning or timing-sensitive
+environment interactions.  Conversely,
+\texttt{cancel-async-tasks} (1/5) and \texttt{dna-assembly}
+(1/5) succeed rarely, suggesting they are at the boundary of the
 model's capability.
 
 \subsection{Discussion}
 
-These results are preliminary: the benchmark is still running and we
-have not yet completed the 5 trials per task required for official
-leaderboard submission.  Nevertheless, several observations stand out:
+With 5 complete trials per task, these results are ready for
+official leaderboard submission.  Several observations stand out:
 
 \begin{itemize}[nosep]
   \item \textbf{System prompt matters.}  An earlier version of
@@ -1462,12 +1464,12 @@ leaderboard submission.  Nevertheless, several observations stand out:
     2 trials per task), confirming that the prompt engineering
     described in Section~\ref{sec:system-prompt} has measurable impact.
   \item \textbf{Variance is high.}  The gap between pass@any
-    (75.3\%) and pass@all (42.7\%) shows that many tasks are
+    (78.7\%) and pass@all (43.8\%) shows that many tasks are
     solvable in principle but not reliably.  This variance is
     inherent to the underlying LLM and is not specific to our agent.
-  \item \textbf{Cost is modest.}  At a median of \$0.40 per trial
-    and \$0.91 mean, the agent is practical for routine use.  The
-    total cost for the 330-trial run was approximately \$240.
+  \item \textbf{Cost is modest.}  At a median of \$0.45 per trial
+    and \$0.90 mean, the agent is practical for routine use.  The
+    total cost for the 442-trial run was approximately \$323.
   \item \textbf{Leaderboard context.}  Anthropic has noted on social
     media that approximately 81\% represents the feasibility ceiling
     for Terminal Bench~2.0.  Recent analysis has also shown that
