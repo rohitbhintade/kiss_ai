@@ -1575,14 +1575,25 @@ within those bounds.
 
 We have shown that a layered, single-concern architecture can address
 the practical challenges of deploying LLM agents for real-world
-software development. 
+software development.  On Terminal Bench~2.0, a benchmark of 89
+diverse terminal-based tasks evaluated across 5 trials each, our
+system achieves a 62.2\% overall pass rate (277/445), a 78.7\%
+pass@any rate (70/89 tasks solved at least once), and a 43.8\%
+pass@all rate (39/89 tasks solved in every trial)---outperforming
+Claude~Code (58\%) and Cursor Composer~2 (61.7\%) on the same
+benchmark with the same underlying model (Claude Opus~4.6).  These
+results are achieved without benchmark-specific optimizations,
+fine-tuning, or reinforcement learning: the entire agent is roughly
+1,800~lines of straightforward Python.
 
 We complement the architecture with a system prompt that encodes
 engineering discipline directly into the agent's behavior: read before
 writing, test before fixing, plan before executing, verify before
-finishing.  These are not novel insights --- they are the practices of
+finishing.  These are not novel insights---they are the practices of
 careful software engineering, translated into instructions that an LLM
-can follow.
+can follow.  The evaluation suggests that giving a frontier model the
+time and tools to validate its own output matters more than
+model-level customization.
 
 We make the source code publicly available at
 \url{https://github.com/ksenxx/kiss_ai}.
