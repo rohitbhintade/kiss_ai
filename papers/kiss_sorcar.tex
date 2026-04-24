@@ -45,7 +45,7 @@ engineering decisions that make the system practical for real-world
 software development.  On Terminal Bench~2.0 (89 diverse
 terminal-based tasks, Claude Opus~4.6), we achieve a 62.7\% overall
 pass rate and 78.7\% pass@any over 5~trials, comparing favorably to
-Claude~Code (58\%) and Cursor (62\%) on the same benchmark at a median
+Claude~Code (58\%) and Cursor Composer~2 (61.7\%)~\citep{cursor2026composer2} on the same benchmark at a median
 cost of \$0.45 per task.
 \end{abstract}
 
@@ -128,7 +128,8 @@ of roughly 1,500~lines of code (excluding empty lines and comments).
 \paragraph{Evaluation.}
 We evaluate on Terminal Bench~2.0 and achieve a 62.7\% overall pass
 rate (78.7\% pass@any over 5~trials) using Claude Opus~4.6, comparing
-favorably to Claude~Code (58\%) and Cursor (62\%) on the same
+favorably to Claude~Code (58\%) and Cursor
+Composer~2 (61.7\%)~\citep{cursor2026composer2} on the same
 benchmark (Section~\ref{sec:evaluation}).
 
 \paragraph{Outline.}
@@ -1412,9 +1413,11 @@ Mean duration per trial  & 446\,s \\
 The 62.7\% overall pass rate compares favorably to other agents
 using the same underlying model: at the time of writing, Claude~Code
 (also Opus~4.6) scores approximately 58\% on the Terminal Bench~2.0
-leaderboard, and the Cursor agent---which uses a custom fine-tuned
-model---achieves roughly 62\%.  Our result suggests that the layered
-architecture and the structured system prompt described in
+leaderboard, and Cursor's Composer~2---a custom fine-tuned
+model trained with large-scale reinforcement
+learning~\citep{cursor2026composer2}---achieves 61.7\%.  Our result
+suggests that the layered architecture and the structured system
+prompt described in
 Sections~\ref{sec:architecture}--\ref{sec:system-prompt} contribute
 meaningfully beyond what the base model provides.
 
@@ -1597,6 +1600,9 @@ summaries, and the system prompt encodes the profile.
 \textbf{IDE integration.}
 GitHub Copilot~\citep{copilot2021}, Cursor~\citep{cursor2024}, and
 Windsurf~\citep{windsurf2024} provide AI assistance within editors.
+Cursor recently released Composer~2~\citep{cursor2026composer2}, a
+custom fine-tuned coding model trained with large-scale reinforcement
+learning that achieves 61.7\% on Terminal Bench~2.0.
 These tools typically operate at the level of code completion or
 single-turn chat.  We operate at the level of autonomous
 multi-step task execution with full tool access and git-level
@@ -1930,6 +1936,11 @@ Gao, P., Tian, Z., Meng, X., and {Trae Research Team}.
 \newblock Trae Agent: An {LLM}-based agent for software engineering
   with test-time scaling.
 \newblock {\em arXiv preprint arXiv:2507.23370}, 2025.
+
+\bibitem[{Cursor Research}(2026)]{cursor2026composer2}
+{Cursor Research}.
+\newblock Composer~2 technical report.
+\newblock {\em arXiv preprint arXiv:2603.24477}, 2026.
 
 \bibitem[{GetShitDone}(2025)]{getshitdone2025}
 {GetShitDone}.
