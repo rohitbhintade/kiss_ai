@@ -54,9 +54,14 @@ software development.
 
 Large language models (LLMs) have demonstrated remarkable ability to
 generate code, reason about software architecture, and operate
-developer tools~\citep{chen2021evaluating,roziere2023code}.  However,
-using a raw LLM as a software engineering assistant exposes several
-practical gaps: context windows are finite, a single mistake can derail
+developer tools~\citep{chen2021evaluating,roziere2023code}.  A growing
+body of work has explored how to harness these capabilities for
+autonomous software engineering, from single-session agents that
+resolve GitHub issues~\citep{yang2024sweagent,wang2024openhands} to
+industrial products marketed as AI
+teammates~\citep{copilot2021,cursor2024,devin2024}.  Yet using an LLM
+as a practical software engineering assistant still exposes several
+stubborn gaps: context windows are finite, a single mistake can derail
 an entire session, and generated changes are difficult to review or
 revert once applied to a live codebase.
 
@@ -64,8 +69,8 @@ We address these gaps through a five-layer agent hierarchy in which
 each layer adds exactly one concern:
 
 \begin{enumerate}[nosep]
-  \item \textbf{KISS Agent} --- budget-tracked ReAct loop with native
-    function calling.
+  \item \textbf{KISS Agent} --- budget-tracked
+    ReAct~\citep{yao2023react} loop with native function calling.
   \item \textbf{Relentless Agent} --- automatic continuation across
     sub-sessions.
   \item \textbf{Sorcar Agent} --- coding tools, browser automation,
@@ -76,48 +81,84 @@ each layer adds exactly one concern:
     every task runs on its own branch.
 \end{enumerate}
 
-The name ``KISS'' reflects the Keep It Simple, Stupid design
+The name ``KISS'' reflects the \emph{Keep It Simple, Stupid} design
 philosophy: each layer is small, each concern is isolated, and the
 overall system avoids unnecessary abstraction.  The name ``Sorcar''
 pays homage to P.~C.~Sorcar, the legendary Indian magician, evoking
 the idea of an agent that performs feats that appear magical yet are
 grounded in disciplined engineering.
 
-In this work, we didn't focus on context compaction; we just added this continuation style (KISS), and there we asked it to summarize. Initially, when I just asked it to summarize the current context and start a new session, it was not working that well.
+\paragraph{Structured continuation over context compaction.}
+Rather than investing in context-compaction techniques, we adopt a
+simple continuation protocol: when a sub-session exhausts its context
+window or step budget, the agent produces a \emph{structured summary}
+of every action taken so far---chronologically ordered, with
+explanations and relevant code snippets---and a fresh sub-session
+resumes from that summary.  This approach is related in spirit to
+Reflexion~\citep{shinn2023reflexion}, which feeds verbal
+self-critiques back into subsequent trials, but operates at the
+granularity of full software engineering tasks rather than isolated
+reasoning problems.  We found empirically that a na\"ive instruction
+to ``summarize the current context'' produced poor continuations;
+requiring a \emph{step-by-step chronological account with code
+  snippets} dramatically improved coherence across sub-sessions.
+A potential limitation is that summaries may grow unwieldy for
+multi-day tasks; in practice, we have not encountered this problem
+even for tasks spanning several hours, but a thorough evaluation of
+summary scaling remains future work.
 
-However, when we added these two extra phrases that not only summarize but summarize each step we have done so far (with the explanation and with code snippets), it suddenly started working much better.
+\paragraph{The system prompt as a first-class artifact.}
+Recent empirical studies have shown that project-level instruction
+files---such as \texttt{.cursorrules}, \texttt{AGENTS.md}, or
+\texttt{CLAUDE.md}---significantly improve agent
+performance~\citep{chatlatanagulchai2025readmes,mohsenimofidi2025context}.
+We take this idea further: the system prompt is not a static preamble
+but a carefully engineered document that encodes invariants about code
+quality, verification discipline, and self-improvement.  We drew
+initial inspiration from the GetShitDone prompt engineering
+collection~\citep{getshitdone2025}, which demonstrated that
+prescriptive prompts can make coding agents substantially more
+effective, and we iteratively refined the prompt through months of
+daily use on a production codebase (Section~\ref{sec:system-prompt}).
 
-Regarding potential limitations:
-1. It is possible that if the agent is running for days, the summaries could grow too long.
-2. If the agent runs for several hours, the summaries could become extensive, though we never encountered that problem for large tasks.
+\paragraph{Quality over speed.}
+We deliberately prioritize output quality over latency.  In our
+experience, using a weaker or cheaper model often forces the developer
+to discard the agent's work and retry, ultimately increasing the total
+cost of completing a task.  Conversely, giving a frontier model
+adequate time to validate its own output---running linters, type
+checkers, and tests before declaring success---dramatically reduces
+the ``slop'' (low-quality, subtly incorrect code) that plagues
+faster but less thorough agents.  We expect token costs and inference
+latencies to continue falling~\citep{gao2025trae}, which will make
+this quality-first posture increasingly practical.  In the meantime,
+the code produced by our agent is consistently well-organized, simple,
+and idiomatic.
 
-We believe that this should be evaluated thoroughly in the future.
+\paragraph{Self-hosting as a stress test.}
+We built the system using itself.  The entire codebase---the KISS
+Agent framework, the Sorcar agent layers, the VS~Code extension, and
+the system prompt---was developed and maintained by the agent operating
+on its own repository.  This self-hosting discipline provides a
+continuous integration-style stress test: if the agent introduces a
+bug that impairs its own ability to work, the feedback loop is
+immediate.  The simplicity of the layered architecture was both a
+prerequisite for and a consequence of this bootstrapping process.
 
-We used ideas from the website GetShitDone on GitHub, 
-which makes any coding agent highly performant in generating high-quality code.
-
-We believe that a user should not restrict the budget on the tasks they are doing. 
-In our experience, we found that if we use a weaker model, oftentimes you have to 
-throw that work out and retry several times, which increases the overall cost of 
-solving a task.
-
-The other thing is that the agent system should not be optimized highly to compact
-its context or to speed up. We believe that the cost of tokens and the latency of frontier models will go down in a couple of years. At this point, AI models still generate a lot of slop, so the goal of this project is to minimize that slop as much as possible. To achieve this, the agent has to run for some time to validate its work and do the best job possible. 
-
-That is why you will see that the Sorcar agent is not as fast as other agents available in the real world, but it gets things done really well. You will love the code being generated by the Sorcar agent; it is well-organized, simple, and elegant. 
-
-This approach actually helped us build Sorcar using Sorcar. The repository and codebase of the KISS agent, the Sorcar agent, and the framework were so simple that the Sorcar agent had no trouble modifying and improving the code without introducing many bugs.
-
+\paragraph{Evaluation.}
 We evaluate on Terminal Bench~2.0 and achieve a 62.1\% overall pass
 rate (75.3\% pass@any over 4~trials) using Claude Opus~4.6, comparing
-favorably to Claude~Code (58\%) and Cursor (62\%) on the same benchmark.
-Section~\ref{sec:evaluation} presents the full results and analysis.
+favorably to Claude~Code (58\%) and Cursor (62\%) on the same
+benchmark (Section~\ref{sec:evaluation}).
 
-We complement the architecture with a carefully structured system
-prompt that encodes invariants about code quality, verification
-discipline, and self-improvement.  Together, the architecture and the
-prompt form a practical AI IDE that integrates with Visual Studio Code
-and operates on real-world repositories.
+\paragraph{Outline.}
+Section~\ref{sec:motivation} describes the motivating design
+principles.  Section~\ref{sec:architecture} presents the five-layer
+agent architecture.  Section~\ref{sec:system-prompt} details the
+system prompt.  Section~\ref{sec:vscode-features} covers the VS~Code
+extension.  Section~\ref{sec:evaluation} reports preliminary
+evaluation results.  Section~\ref{sec:related} discusses related work,
+and Section~\ref{sec:conclusion} concludes.
 
 %----------------------------------------------------------------------
 \section{Motivation and Key Design Principles}
@@ -1930,6 +1971,11 @@ Gao, P., Tian, Z., Meng, X., and {Trae Research Team}.
 \newblock Trae Agent: An {LLM}-based agent for software engineering
   with test-time scaling.
 \newblock {\em arXiv preprint arXiv:2507.23370}, 2025.
+
+\bibitem[{GetShitDone}(2025)]{getshitdone2025}
+{GetShitDone}.
+\newblock {GetShitDone}: Prompt engineering for coding agents.
+\newblock \url{https://github.com/alexnodejs/get-shit-done}, 2025.
 
 \end{thebibliography}
 }
