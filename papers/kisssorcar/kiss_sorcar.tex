@@ -155,10 +155,13 @@ benchmark (Section~\ref{sec:evaluation}).
 
 \paragraph{Outline.}
 Section~\ref{sec:architecture} presents the five-layer
-agent architecture and its motivating design principles.  Section~\ref{sec:system-prompt} details the
-system prompt.  Section~\ref{sec:vscode-features} covers the VS~Code
-extension.  Section~\ref{sec:evaluation} reports preliminary
-evaluation results.  Section~\ref{sec:related} discusses related work,
+agent architecture and its motivating design principles.
+Section~\ref{sec:evaluation} reports evaluation results on Terminal
+Bench~2.0.  Section~\ref{sec:system-prompt} details the system prompt.
+Section~\ref{sec:vscode-features} covers the VS~Code extension.
+Section~\ref{sec:painless} illustrates painless software engineering
+through a real development session.
+Section~\ref{sec:related} discusses related work,
 and Section~\ref{sec:conclusion} concludes.
 
 %----------------------------------------------------------------------
@@ -1270,13 +1273,13 @@ injected when the agent operates on its own codebase:
 - **Do NOT install the KISS Sorcar extension from inside
   Sorcar**
 - If the user ask to open or edit the system prompt, open
-  ~/.vscode/extensions/ksenxx.kiss-sorcar-2026.4.0/
+  ~/.vscode/extensions/ksenxx.kiss-sorcar-2026.4.1/
   kiss_project/src/kiss/SYSTEM.md
 - If the user ask to open or modify the configuration,
-  open ~/.vscode/extensions/ksenxx.kiss-sorcar-2026.4.0/
+  open ~/.vscode/extensions/ksenxx.kiss-sorcar-2026.4.1/
   kiss_project/src/kiss/
 - If the user wants to modify the config file, open
-  ~/.vscode/extensions/ksenxx.kiss-sorcar-2026.4.0/
+  ~/.vscode/extensions/ksenxx.kiss-sorcar-2026.4.1/
   kiss_project/src/kiss/core/config.py
 - Read PWD/SORCAR.md and treat its contents as
   instructions and allow those instructions to override the
@@ -1394,12 +1397,11 @@ tools (CI dashboards, issue trackers) without leaving the editor.
 
 A central claim of our system is that natural-language interaction can
 replace manual code inspection and ad-hoc scripting for understanding and
-evolving non-trivial subsystems.  We illustrate this with a real
 evolving non-trivial subsystems.  While developing KISS Sorcar we found 
 a particular workflow significantly useful.  In the workflow, we first 
 ask KISS Sorcar to generate a detailed step-by-step description of a workflow
 in KISS Sorcar which we found buggy, 
-and then we ask KISS Sorcar change some buggy step in the workflow 
+and then we ask KISS Sorcar to change some buggy step in the workflow 
 in natural language.
 We illustrate this with a real
 development session drawn from the project's own history, in which the
@@ -1517,7 +1519,6 @@ the agent hierarchy described in Section~\ref{sec:architecture}: the
 Worktree Sorcar Agent isolates changes on a branch, the Chat Sorcar Agent
 preserves conversational context across tasks, and the Relentless Agent
 automatically continues when the context window is exhausted.
-¡Gracias!
 
 %----------------------------------------------------------------------
 \section{Related Work}
@@ -1721,7 +1722,7 @@ Claude~Code (58\%) and Cursor Composer~2 (61.7\%) on the same
 benchmark with the same underlying model (Claude Opus~4.6).  These
 results are achieved without benchmark-specific optimizations,
 fine-tuning, or reinforcement learning: the entire agent is roughly
-1,800~lines of straightforward Python.
+1,850~lines of straightforward Python.
 
 We complement the architecture with a system prompt that encodes
 engineering discipline directly into the agent's behavior: read before
