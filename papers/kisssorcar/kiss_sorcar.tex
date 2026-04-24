@@ -1399,6 +1399,13 @@ tools (CI dashboards, issue trackers) without leaving the editor.
 A central claim of our system is that natural-language interaction can
 replace manual code inspection and ad-hoc scripting for understanding and
 evolving non-trivial subsystems.  We illustrate this with a real
+evolving non-trivial subsystems.  While developing KISS Sorcar we found 
+a particular workflow significantly useful.  In the workflow, we first 
+ask KISS Sorcar to generate a detailed step-by-step description of a workflow
+in KISS Sorcar which we found buggy, 
+and then we ask KISS Sorcar change some buggy step in the workflow 
+in natural language.
+We illustrate this with a real
 development session drawn from the project's own history, in which the
 worktree merge workflow (Section~\ref{sec:worktree-agent}) was first
 understood and then redesigned entirely through conversational prompts.
