@@ -86,24 +86,12 @@ pays homage to P.~C.~Sorcar, the legendary Indian magician, evoking
 the idea of an agent that performs feats that appear magical yet are
 grounded in disciplined engineering.
 
-\paragraph{Structured continuation over context compaction.}
-Rather than investing in context-compaction techniques, we adopt a
-simple continuation protocol: when a sub-session exhausts its context
-window or step budget, the agent produces a \emph{structured summary}
-of every action taken so far---chronologically ordered, with
-explanations and relevant code snippets---and a fresh sub-session
-resumes from that summary.  This approach is related in spirit to
-Reflexion~\citep{shinn2023reflexion}, which feeds verbal
-self-critiques back into subsequent trials, but operates at the
-granularity of full software engineering tasks rather than isolated
-reasoning problems.  We found empirically that a na\"ive instruction
-to ``summarize the current context'' produced poor continuations;
-requiring a \emph{step-by-step chronological account with code
-  snippets} dramatically improved coherence across sub-sessions.
-A potential limitation is that summaries may grow unwieldy for
-multi-day tasks; in practice, we have not encountered this problem
-even for tasks spanning several hours, but a thorough evaluation of
-summary scaling remains future work.
+We realize this architecture as a free, open-source Visual Studio Code
+extension with full browser automation, multimodal support via a
+built-in Chromium instance, and real-time cost tracking.  The user
+supplies their own API key, and the system handles the rest.
+Section~\ref{sec:vscode-features} describes the extension's unique
+features in detail.
 
 \paragraph{The system prompt as a first-class artifact.}
 Recent empirical studies have shown that project-level instruction
@@ -255,6 +243,24 @@ tasks.
 The Relentless Agent wraps a KISS Agent in a continuation loop.  Its
 core contribution is the ability to execute tasks that exceed a single
 context window by breaking them into sub-sessions.
+
+Rather than investing in context-compaction techniques, we adopt a
+simple continuation protocol: when a sub-session exhausts its context
+window or step budget, the agent produces a \emph{structured summary}
+of every action taken so far---chronologically ordered, with
+explanations and relevant code snippets---and a fresh sub-session
+resumes from that summary.  This approach is related in spirit to
+Reflexion~\citep{shinn2023reflexion}, which feeds verbal
+self-critiques back into subsequent trials, but operates at the
+granularity of full software engineering tasks rather than isolated
+reasoning problems.  We found empirically that a na\"ive instruction
+to ``summarize the current context'' produced poor continuations;
+requiring a \emph{step-by-step chronological account with code
+  snippets} dramatically improved coherence across sub-sessions.
+A potential limitation is that summaries may grow unwieldy for
+multi-day tasks; in practice, we have not encountered this problem
+even for tasks spanning several hours, but a thorough evaluation of
+summary scaling remains future work.
 
 \textbf{Continuation protocol.}  The \texttt{finish} tool exposed to
 the inner KISS Agent accepts three fields: a success flag, a continue
@@ -1227,7 +1233,7 @@ Sorcar-specific instructions $\rightarrow$ repository-specific
 \label{sec:vscode-features}
 %----------------------------------------------------------------------
 
-We ship the system as a VS~Code extension called KISS Sorcar.  While
+We ship our system as a VS~Code extension.  While
 the underlying agent architecture (Sections~\ref{sec:architecture}
 and~\ref{sec:system-prompt}) already differs from existing AI coding
 assistants, the extension's user-facing design introduces several
@@ -1404,7 +1410,7 @@ LLM backend the extension is configured to use.
 \label{sec:evaluation}
 %----------------------------------------------------------------------
 
-We evaluate KISS Sorcar on Terminal
+We evaluate our system on Terminal
 Bench~2.0,\footnote{\url{https://www.tbench.ai/}} a benchmark of 89
 diverse terminal-based programming tasks that range from building
 legacy compilers and configuring servers to solving cryptanalysis
@@ -1501,7 +1507,7 @@ leaderboard submission.  Nevertheless, several observations stand out:
 
 \begin{itemize}[nosep]
   \item \textbf{System prompt matters.}  An earlier version of
-    Sorcar using only a basic prompt achieved approximately 61\% on
+    our agent using only a basic prompt achieved approximately 61\% on
     Terminal Bench.  The improved prompt presented in this paper
     raises that to 67\% in our latest configuration run (66.2\% with
     2 trials per task), confirming that the prompt engineering
