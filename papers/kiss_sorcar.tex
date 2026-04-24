@@ -32,24 +32,31 @@
 \end{center}
 
 \begin{abstract}
-We present KISS Sorcar, an AI-powered general assistant and integrated
-development environment built around a simplelayered agent architecture.  At
-its foundation, the KISS Agent implements a budget-aware ReAct loop
-with native function calling.  The Relentless Agent extends this with
-automatic multi-session continuation, enabling
-arbitrarily long tasks that survive context-window exhaustion.  The
-Sorcar Agent adds coding tools, browser automation, and parallel
-sub-agent execution.  The Chat Sorcar Agent introduces persistent
-multi-turn chat sessions, and the Worktree Sorcar Agent isolates every
-task on a dedicated git branch via worktrees so the developer's main
-working tree is never modified.  We describe the design of each layer,
-the structured system prompt that governs agent behavior, and the
-engineering decisions that make the system practical for real-world
-software development.  On Terminal Bench~2.0 (89 diverse
-terminal-based tasks, Claude Opus~4.6), we achieve a 62.7\% overall
-pass rate, comparing favorably to
-Claude~Code (58\%) and Cursor Composer~2 (61.7\%)~\citep{cursor2026composer2} 
-on the same benchmark at a median cost of \$0.45 per task.
+Large language models can generate code and operate developer tools with
+remarkable fluency, yet deploying them as practical software-engineering
+assistants still exposes stubborn gaps: finite context windows, single
+mistakes that derail entire sessions, agents that get stuck in dead ends,
+and generated changes that are difficult to review or revert.
+We present \textbf{KISS Sorcar}, a general-purpose assistant and
+integrated development environment built on top of the \textbf{KISS Agent
+Framework}, a stupidly-simple agentic framework of roughly 1,500~lines of
+code.  The framework addresses these gaps through a five-layer agent
+hierarchy in which each layer adds exactly one concern: budget-tracked
+ReAct execution, automatic continuation across sub-sessions, coding and
+browser tools with parallel sub-agents, persistent multi-turn chat with
+history recall, and git-worktree isolation so every task runs on its own
+branch.  KISS Sorcar is implemented as a free, open-source Visual Studio
+Code extension that runs locally and supports browser automation,
+multimodal input, and Docker containers.  We deliberately prioritize
+output quality over latency: giving a frontier model adequate time to
+validate its own output---running linters, type checkers, and
+tests---dramatically reduces the low-quality code that plagues faster but
+less thorough agents.  The entire system was built using itself,
+providing a continuous stress test in which any agent-introduced bug
+immediately impairs its own ability to work.  On Terminal~Bench~2.0, KISS
+Sorcar achieves a 62.7\% overall pass rate with Claude Opus~4.6,
+comparing favorably to Claude~Code (58\%) and Cursor Composer~2
+(61.7\%).
 \end{abstract}
 
 %----------------------------------------------------------------------
@@ -408,7 +415,8 @@ isolation, ensuring it never fails due to git preconditions.
 \label{sec:evaluation}
 %----------------------------------------------------------------------
 
-Before we discuss a crucial aspect of KISS Sorcar, the system prompt, we describe the 
+To keep the readers engaged, before we discuss a crucial aspect of KISS Sorcar, 
+the system prompt, we describe the 
 evaluation outcome of KISS Sorcar on the Terminal Bench 2.0, which was also recently 
 used by the Cursor agent of Composer 2.0. 
 
