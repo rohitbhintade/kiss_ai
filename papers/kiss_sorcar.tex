@@ -20,9 +20,7 @@
 
 \author{%
   Koushik Sen \\
-  Department of Electrical Engineering and Computer Sciences \\
-  University of California, Berkeley \\
-  Berkeley, CA 94720 \\
+  EECS Department, UC Berkeley\\
   \texttt{ksen@berkeley.edu} \\
 }
 
@@ -144,6 +142,10 @@ continuous integration-style stress test: if the agent introduces a
 bug that impairs its own ability to work, the feedback loop is
 immediate.  The simplicity of the layered architecture was both a
 prerequisite for and a consequence of this bootstrapping process.
+The four core agent classes are remarkably compact: the KISS Agent
+comprises 409~lines, the Sorcar Agent 323~lines, the Chat Sorcar
+Agent 120~lines, and the Worktree Sorcar Agent 692~lines---a total
+of roughly 1,500~lines of code (excluding empty lines and comments).
 
 \paragraph{Evaluation.}
 We evaluate on Terminal Bench~2.0 and achieve a 62.1\% overall pass
