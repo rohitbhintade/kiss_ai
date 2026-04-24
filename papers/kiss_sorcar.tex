@@ -30,7 +30,7 @@
 
 \begin{abstract}
 We present KISS Sorcar, an AI-powered general assistant and integrated
-development environment built around a layered agent architecture.  At
+development environment built around a simplelayered agent architecture.  At
 its foundation, the KISS Agent implements a budget-aware ReAct loop
 with native function calling.  The Relentless Agent extends this with
 automatic multi-session continuation, enabling
@@ -44,9 +44,9 @@ the structured system prompt that governs agent behavior, and the
 engineering decisions that make the system practical for real-world
 software development.  On Terminal Bench~2.0 (89 diverse
 terminal-based tasks, Claude Opus~4.6), we achieve a 62.7\% overall
-pass rate and 78.7\% pass@any over 5~trials, comparing favorably to
-Claude~Code (58\%) and Cursor Composer~2 (61.7\%)~\citep{cursor2026composer2} on the same benchmark at a median
-cost of \$0.45 per task.
+pass rate, comparing favorably to
+Claude~Code (58\%) and Cursor Composer~2 (61.7\%)~\citep{cursor2026composer2} 
+on the same benchmark at a median cost of \$0.45 per task.
 \end{abstract}
 
 %----------------------------------------------------------------------
@@ -54,14 +54,15 @@ cost of \$0.45 per task.
 \label{sec:intro}
 %----------------------------------------------------------------------
 
-Large language models (LLMs) have demonstrated remarkable ability to
+Modern Large language models (LLMs), such as Anthropic's Claude Opus 4.6, OpenAI's GPT 5.4,
+and Google's Gemini 3.1, have demonstrated remarkable ability to
 generate code, reason about software architecture, and operate
 developer tools~\citep{chen2021evaluating,roziere2023code}.  A growing
 body of work has explored how to harness these capabilities for
 autonomous software engineering, from single-session agents that
 resolve GitHub issues~\citep{yang2024sweagent,wang2024openhands} to
 industrial products marketed as AI
-teammates~\citep{copilot2021,cursor2024,devin2024}.  Yet using an LLM
+teammates~\citep{copilot2021,cursor2024,devin2024,claudecode2025,codex2025,openclaw2025}.  Yet using an LLM
 as a practical software engineering assistant still exposes several
 stubborn gaps: context windows are finite, a single mistake can derail
 an entire session, and generated changes are difficult to review or
@@ -85,17 +86,17 @@ each layer adds exactly one concern:
 
 The name ``KISS'' reflects the \emph{Keep It Simple, Stupid} design
 philosophy: each layer is small, each concern is isolated, and the
-overall system avoids unnecessary abstraction.  The name ``Sorcar''
-pays homage to P.~C.~Sorcar, the legendary Indian magician, evoking
-the idea of an agent that performs feats that appear magical yet are
-grounded in disciplined engineering.
+overall system avoids unnecessary abstraction.  
 
 We realize this architecture as a free, open-source Visual Studio Code
 extension with full browser automation, multimodal support via a
 built-in Chromium instance, and real-time cost tracking.  The user
 supplies their own API key, and the system handles the rest.
 Section~\ref{sec:vscode-features} describes the extension's unique
-features in detail.
+features in detail.  The name ``Sorcar''
+pays homage to P.~C.~Sorcar, the legendary Indian magician, evoking
+the idea of an agent that performs feats that appear magical yet are
+grounded in disciplined engineering.
 
 \paragraph{Quality over speed.}
 We deliberately prioritize output quality over latency.  In our
@@ -127,7 +128,7 @@ of roughly 1,500~lines of code (excluding empty lines and comments).
 
 \paragraph{Evaluation.}
 We evaluate on Terminal Bench~2.0 and achieve a 62.7\% overall pass
-rate (78.7\% pass@any over 5~trials) using Claude Opus~4.6, comparing
+rate using Claude Opus~4.6, comparing
 favorably to Claude~Code (58\%) and Cursor
 Composer~2 (61.7\%)~\citep{cursor2026composer2} on the same
 benchmark (Section~\ref{sec:evaluation}).
@@ -1749,6 +1750,16 @@ H.
 \newblock {AutoGPT}.
 \newblock \url{https://github.com/Significant-Gravitas/AutoGPT}, 2023.
 
+\bibitem[{OpenAI}(2025)]{codex2025}
+{OpenAI}.
+\newblock Introducing {Codex}: A cloud-based software engineering agent.
+\newblock \url{https://openai.com/index/introducing-codex/}, 2025.
+
+\bibitem[{OpenClaw AI}(2025)]{openclaw2025}
+{OpenClaw AI}.
+\newblock {OpenClaw}: Personal {AI} assistant.
+\newblock \url{https://openclaw.ai}, 2025.
+
 \bibitem[Nakajima(2023)]{babyagi2023}
 Nakajima, Y.
 \newblock {BabyAGI}.
@@ -1782,6 +1793,11 @@ Xia, C.~S., Deng, Y., Dunn, S., and Zhang, L.
 \newblock Agentless: Demystifying {LLM}-based software engineering
   agents.
 \newblock {\em arXiv preprint arXiv:2407.01489}, 2024.
+
+\bibitem[{Anthropic}(2025)]{claudecode2025}
+{Anthropic}.
+\newblock {Claude Code}: Anthropic's agentic coding system.
+\newblock \url{https://www.anthropic.com/product/claude-code}, 2025.
 
 \bibitem[{Cognition Labs}(2024)]{devin2024}
 {Cognition Labs}.
