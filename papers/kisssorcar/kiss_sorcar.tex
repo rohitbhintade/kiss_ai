@@ -896,6 +896,20 @@ Finally, our experience building KISS Sorcar suggests that we are in the Golden 
 
 While using it, we found that we don't spend much time working.  We are mostly getting bored. Although many experts suggest that AI will be harmful if it falls into the wrong hands without proper security and safety guardrails, we believe the biggest problem will be mental health issues, which could end human civilization if not properly addressed in advance.  
 
+\section*{An Important Advice} We found that researchers are publishing 
+lots of papers on AI and it is hard to keep track of them or validate their claim.
+We propose to use the following prompt with KISS Sorcar to identify issues in blogs and papers:
+
+\begin{prompt}
+Can you read <<url>> and check for wrong assumptions, wrong results, 
+cheating, irreproducibility, or fraud?  Use internet search extensively 
+and do not belive what people say--verify them yourself.  
+Do not hesisate to download code and run them to validate results.  
+Generate an html report in PWD/sorcar_reported_frauds/. 
+Thoroughly fact check everything you claim in the report.
+\end{prompt}
+In the prompt, replace <<url>> with the actual link to a blog or a paper.
+
 \section*{Acknowledgments}
 
 This research is supported in part by gifts from Accenture, Amazon, AMD, 
@@ -916,6 +930,7 @@ Disclaimer: The paper has been edited in part using KISS Sorcar, an AI tool.
 %----------------------------------------------------------------------
 % References
 %----------------------------------------------------------------------
+
 
 {
 \small
