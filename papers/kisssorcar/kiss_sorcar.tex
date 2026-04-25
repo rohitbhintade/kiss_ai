@@ -786,21 +786,74 @@ SWE-Agent~\citep{yang2024sweagent} and
 OpenHands~\citep{wang2024openhands} provides LLM-based agents for resolving software engineering tasks such as GitHub issues.  Both use a single-session execution model without automatic continuation. Agentless~\citep{xia2024agentless} takes the opposite approach, showing that a simple two-phase localize-then-repair pipeline without autonomous agent loops can achieve competitive results on SWE-bench~\citep{jimenez2024swebench}.  Devin~\citep{devin2024}, an industrial product marketed as ``the first AI software engineer,'' operates in a sandboxed environment with shell, browser, and editor access.  Aider~\citep{aider2023} provides a terminal-based pair programming interface with tight git integration, automatically committing each change.  Our Relentless Agent layer addresses the single-session limitation shared by most of these systems, while our worktree isolation provides stronger safety guarantees than per-change commits.
 
 \textbf{ReAct and tool use.}
-The ReAct framework~\citep{yao2023react} interleaves reasoning and action.  Toolformer~\citep{schick2023toolformer} teaches models to use tools via self-supervised learning.  We use native function calling provided by modern LLM APIs rather than in-context tool descriptions, which reduces prompt overhead and improves reliability.
+The ReAct framework~\citep{yao2023react} interleaves reasoning and action.  
+Toolformer~\citep{schick2023toolformer} teaches models to use tools via 
+self-supervised learning.  We use native function calling provided by modern
+ LLM APIs rather than in-context tool descriptions, which reduces prompt overhead 
+ and improves reliability.
 
-\textbf{Reasoning and planning.} Chain-of-thought prompting~\citep{wei2022chain} demonstrated that eliciting step-by-step reasoning dramatically improves LLM performance on complex tasks.  Tree of Thoughts~\citep{yao2024tree} generalizes this to deliberate search over multiple reasoning paths. Reflexion~\citep{shinn2023reflexion} introduces verbal reinforcement
-learning, where an agent reflects on failed attempts and produces self-critiques that improve subsequent trials.  Our continuation protocol is conceptually related to Reflexion: failed sub-sessions produce summaries that inform subsequent attempts.  However, in our case, we use the summaries to continue the task.
+\textbf{Reasoning and planning.} Chain-of-thought prompting~\citep{wei2022chain} 
+demonstrated that eliciting step-by-step reasoning dramatically improves LLM 
+performance on complex tasks.  Tree of Thoughts~\citep{yao2024tree} generalizes 
+this to deliberate search over multiple reasoning paths. 
+Reflexion~\citep{shinn2023reflexion} introduces verbal reinforcement
+learning, where an agent reflects on failed attempts and produces self-critiques 
+that improve subsequent trials.  Our continuation protocol is conceptually related
+to Reflexion: failed sub-sessions produce summaries that inform subsequent attempts.  
+However, in our case, we use the summaries to continue the task.
 
 \textbf{Multi-agent software development.}
-ChatDev~\citep{qian2024chatdev} models the software development process as a conversation between role-playing agents (CEO, CTO, programmer, tester) organized in a waterfall-like pipeline. MetaGPT~\citep{hong2024metagpt} takes a meta-programming approach, encoding standard operating procedures as structured outputs that coordinate specialized agents. AutoGen~\citep{wu2023autogen} provides a general-purpose framework for multi-agent conversation, enabling flexible topologies beyond fixed pipelines.  These systems focus on generating entire applications from scratch.  We take a different approach: rather than simulating an organization of specialists, we use a single agent with broad access to tools and optional parallel sub-agents for embarrassingly parallel sub-tasks, prioritizing practical utility on real-world codebases over role-playing fidelity.
+ChatDev~\citep{qian2024chatdev} models the software development process as a 
+conversation between role-playing agents (CEO, CTO, programmer, tester) organized 
+in a waterfall-like pipeline. MetaGPT~\citep{hong2024metagpt} takes a 
+meta-programming approach, encoding standard operating procedures as structured 
+outputs that coordinate specialized agents. AutoGen~\citep{wu2023autogen} provides
+a general-purpose framework for multi-agent conversation, enabling flexible topologies
+beyond fixed pipelines.  These systems focus on generating entire applications from 
+scratch.  We take a different approach: rather than simulating an organization of 
+specialists, we use a single agent with broad access to tools and optional parallel 
+sub-agents for embarrassingly parallel sub-tasks, prioritizing practical utility on 
+real-world codebases over role-playing fidelity.
 
 \textbf{Multi-turn autonomous agents.}
-AutoGPT~\citep{autogpt2023} and BabyAGI~\citep{babyagi2023} implement multi-step autonomous agents.  These systems typically lack budget controls and safe code isolation.  Our layered architecture addresses each of these concerns in a dedicated layer.
+AutoGPT~\citep{autogpt2023} and BabyAGI~\citep{babyagi2023} implement multi-step 
+autonomous agents.  These systems typically lack budget controls and safe code 
+isolation.  Our layered architecture addresses each of these concerns in a 
+dedicated layer.
 
 \textbf{Code-specialized language models.}
-Beyond the general-purpose LLMs that our system can use as backends, a rich line of work has produced models specifically trained for code. Code Llama~\citep{roziere2023code} fine-tunes Llama~2 for code generation and infilling. StarCoder~\citep{li2023starcoder} trains on permissively licensed code from GitHub with a fill-in-the-middle objective. DeepSeek-Coder~\citep{guo2024deepseek} trains on a 2-trillion-token corpus of code and natural language with a repository-level context window.  Our system is model-agnostic and can leverage any of these models through its pluggable LLM backend, benefiting from advances in code-specialized pre-training without architectural changes.
+Beyond the general-purpose LLMs that our system can use as backends, 
+a rich line of work has produced models specifically trained for code. 
+Code Llama~\citep{roziere2023code} fine-tunes Llama~2 for code generation 
+and infilling. StarCoder~\citep{li2023starcoder} trains on permissively 
+licensed code from GitHub with a fill-in-the-middle objective. 
+DeepSeek-Coder~\citep{guo2024deepseek} trains on a 2-trillion-token corpus 
+of code and natural language with a repository-level context window.
+More recently, frontier models have been optimized specifically for
+agentic software engineering.
+Claude Opus~4.6~\citep{anthropic2026opus46} advances long-horizon
+coding and agentic task execution.
+Cursor released Composer~2~\citep{cursor2026composer2}, a custom
+fine-tuned coding model trained with large-scale reinforcement learning.
+Kimi K2.5~\citep{kimiteam2026k25} is an open-source multimodal agentic
+model that jointly optimizes text and vision and introduces Agent Swarm
+for parallel task decomposition.
+GLM-5.1~\citep{zai2026glm51} is a 754-billion-parameter
+mixture-of-experts model from Z.ai that sustains autonomous coding over
+multi-hour sessions, achieving state-of-the-art on SWE-Bench~Pro.
+Our system is model-agnostic and can leverage any of these models through its 
+pluggable LLM backend, benefiting from advances in code-specialized 
+pre-training without architectural changes.
 
-\textbf{Software engineering benchmarks.} SWE-bench~\citep{jimenez2024swebench} evaluates agents on real-world GitHub issues drawn from popular Python repositories, requiring the agent to localize and fix bugs given only the issue description.  It has become the de facto standard for measuring agent capabilities in software engineering. HumanEval~\citep{chen2021evaluating} and MBPP~\citep{austin2021program} evaluate function-level code generation from docstrings.  These benchmarks focus on isolated coding problems; We target the broader workflow of multi-file, multi-step software engineering tasks that require tool use, testing, and version control.
+\textbf{Software engineering benchmarks.} SWE-bench~\citep{jimenez2024swebench} 
+evaluates agents on real-world GitHub issues drawn from popular Python repositories, 
+requiring the agent to localize and fix bugs given only the issue description.  
+It has become the de facto standard for measuring agent capabilities in software 
+engineering. HumanEval~\citep{chen2021evaluating} and MBPP~\citep{austin2021program} 
+evaluate function-level code generation from docstrings.  These benchmarks focus 
+on isolated coding problems; We target the broader workflow of multi-file, 
+multi-step software engineering tasks that require tool use, testing, and version 
+control.
 
 \textbf{Agent frameworks and orchestration.} LangChain~\citep{langchain2022} provides modular abstractions for building LLM applications, including agent loops, tool integration, and memory. It focuses on composability and breadth of integrations rather than on the specific concerns of software development.  Our architecture is purpose-built for software engineering, with each layer addressing a specific practical concern (budget tracking, continuation, code safety) rather than providing general-purpose
 primitives.
@@ -897,23 +950,26 @@ We have shown that a layered, single-concern architecture can address the practi
 
 We complement the architecture with a system prompt that encodes engineering discipline directly into the agent's behavior: read before writing, test before fixing, plan before executing, verify before finishing.  These are not novel insights---they are the practices of careful software engineering, translated into instructions that an LLM can follow.  The evaluation suggests that giving a frontier model the time and tools to validate its own output matters more than model-level customization.
 
-Finally, our experience building KISS Sorcar suggests that we are in the Golden Age of Experts. If someone is an expert in some particular domain and knows how to use Claude Opus 4.6 or a newer model effectively, they are the King. While implementing KISS and KISS Sorcar, we read the thinking tokens of Claude Opus 4.6, and we found it to be way more intelligent than anything or anyone we have encountered in the past. In fact, we found that Opus 4.6 is so intelligent that I feel that we are the bottleneck.  We are exploring and exploiting Opus 4.6 and see "what is possible".  We see that several academic research efforts will be obsolete in the future because Opus 4.6 can do them better with the right instructions.  We see that people will be writing and customizing their own software to meet their needs rather than relying on large software vendors.  We have to forget much conventional wisdom if we want to make big strides.  Hopefully, in 3-5 years, this expert knowledge will be incorporated into the best frontier model--the future will be bright for AI experts and bleak for the rest of the people.  
+Finally, our experience building KISS Sorcar suggests that we are in the Golden Age of Experts. If someone is an expert in some particular domain and knows how to use Claude Opus 4.6 or a newer model effectively, they are the King. While implementing KISS and KISS Sorcar, we read the thinking tokens of Claude Opus 4.6, and we found it to be way more intelligent than anything or anyone we have encountered in the past. In fact, we found that Opus 4.6 is so intelligent that we feel that we are the bottleneck.  We are exploring and exploiting Opus 4.6 and see "what is possible".  We see that several academic research efforts will be obsolete in the future because Opus 4.6 can do them better with the right instructions.  We see that people will be writing and customizing their own software to meet their needs rather than relying on large software vendors.  We have to forget much conventional wisdom if we want to make big strides.  Hopefully, in 3-5 years, this expert knowledge will be incorporated into the best frontier model--the future will be bright for AI experts and bleak for the rest of the people.  
 
 While using it, we found that we don't spend much time working.  We are mostly getting bored. Although many experts suggest that AI will be harmful if it falls into the wrong hands without proper security and safety guardrails, we believe the biggest problem will be mental health issues, which could end human civilization if not properly addressed in advance.  
 
 \section*{An Important Advice} We found that researchers are publishing 
 lots of papers on AI and it is hard to keep track of them or validate their claim.
-We propose to use the following prompt with KISS Sorcar to identify issues in blogs and papers:
+We propose to use the following prompt with KISS Sorcar to identify issues 
+in blogs, papers, and code repositories:
 
 \begin{prompt}
 Can you read <<url>> and check for wrong assumptions, wrong results, 
-cheating, irreproducibility, or fraud?  Use internet search extensively 
+cheating, irreproducibility, fraud, or potential for cheating in evaluation?  
+Use internet search extensively 
 and do not belive what people say--verify them yourself.  
 Do not hesisate to download code and run them to validate results.  
 Generate an html report in PWD/sorcar_reported_frauds/. 
 Thoroughly fact check everything you claim in the report.
 \end{prompt}
-In the prompt, replace <<url>> with the actual link to a blog or a paper.
+In the prompt, replace <<url>> with the actual link to a blog, a paper, 
+or a code repository.
 
 \section*{Acknowledgments}
 
