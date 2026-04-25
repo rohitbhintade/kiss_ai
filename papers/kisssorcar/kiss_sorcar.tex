@@ -87,6 +87,13 @@ each layer solves exactly one concern:
 
 The name ``KISS'' reflects the \emph{Keep It Simple, Stupid} design philosophy in software engineering: each layer is small, each concern is isolated, and the overall system avoids unnecessary abstraction.  
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{KISS-Sorcar.png}
+\caption{Screenshot of KISS Sorcar running as a VS~Code extension. The sidebar shows the agent's chat interface with real-time budget tracking, while the editor displays the code being modified.}
+\label{fig:kiss-sorcar-screenshot}
+\end{figure}
+
 To access the power and capabilities of the KISS agent framework, we implement KISS Sorcar. KISS Sorcar is a general-purpose assistant and an integrated development environment (IDE) built on top of the KISS agent framework. It codes really well and works pretty fast.  We implemented KISS Sorcar as a Visual Studio Code extension and runs locally. It has full browser support (using open-source Chromium browser and Playwright), multimodal support, Docker container support, and OpenClaw-like features (whose discussion is beyond the scope of the paper). The good part is that KISS Sorcar is completely free and open-source; all one needs is a model API key from a major LLM provider, such as Anthropic.  We implemented this framework in roughly 4.5 months, and the repository is available at \url{https://github.com/ksenxx/kiss_ai}.
 The name ``Sorcar'' pays homage to P.~C.~Sorcar, the legendary Bengali magician, evoking the idea of an agent that performs feats that appear magical yet are grounded in disciplined engineering. 
 
@@ -689,14 +696,6 @@ These overrides serve four purposes.  First, they specify the exact toolchain co
 %----------------------------------------------------------------------
 
 We release our system as a VS~Code extension.  While the underlying agent architecture (Sections~\ref{sec:architecture} and~\ref{sec:system-prompt}) already differs from existing AI coding assistants, the extension's user-facing design introduces several features that, to our knowledge, are not present in any competing IDE or assistant---including GitHub Copilot~\citep{copilot2021}, Cursor~\citep{cursor2024}, Windsurf~\citep{windsurf2024}, Devin~\citep{devin2024}, and Aider~\citep{aider2023}.  We enumerate these features below.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{KISS-Sorcar.png}
-\caption{Screenshot of KISS Sorcar running as a VS~Code extension. The sidebar shows the agent's chat interface with real-time budget tracking, while the editor displays the code being modified.}
-\label{fig:kiss-sorcar-screenshot}
-\end{figure}
-
 
 %......................................................................
 \subsection{Cross-Session Self-Improvement}
