@@ -14,7 +14,6 @@
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{fancyvrb}
-\DefineVerbatimEnvironment{prompt}{Verbatim}{fontsize=\scriptsize,frame=single,framesep=2mm,samepage=true}
 \usepackage{listings}
 \lstdefinestyle{kisspy}{
   language=Python,
@@ -32,6 +31,8 @@
   tabsize=4,
   captionpos=b,
 }
+\usepackage{minted}
+\newminted[prompt]{markdown}{fontsize=\scriptsize,frame=single,framesep=2mm,breaklines}
 
 \title{KISS Sorcar: A Stupidly-Simple General-Purpose and Software Engineering AI Assistant}
 
