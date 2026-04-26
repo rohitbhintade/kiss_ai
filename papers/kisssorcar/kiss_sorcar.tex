@@ -31,8 +31,9 @@
   tabsize=4,
   captionpos=b,
 }
-\usepackage{minted}
-\newminted[prompt]{markdown}{fontsize=\scriptsize,frame=single,framesep=2mm,breaklines}
+\lstnewenvironment{prompt}{%
+  \lstset{language={},basicstyle=\ttfamily\scriptsize,frame=single,framesep=2mm,breaklines=true,columns=fullflexible}%
+}{}
 
 \title{KISS Sorcar: A Stupidly-Simple General-Purpose and Software Engineering AI Assistant}
 
