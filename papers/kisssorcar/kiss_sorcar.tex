@@ -859,12 +859,13 @@ While using it, we found that we don't spend much time working.  We are mostly g
 lots of papers on AI and it is hard to keep track of them or validate their claim. We propose to use the following prompt with KISS Sorcar to identify issues in blogs, papers, and code repositories:
 
 \begin{prompt}
-Can you read <<url>> and check for wrong assumptions, wrong results, 
-cheating, irreproducibility, fraud, or potential for cheating in evaluation?  
-Use internet search extensively 
-and do not believe what people say--verify them yourself.  
-Do not hesisate to download code and run them to validate results.  
-Generate an html report in PWD/sorcar_reported_frauds/. 
+Can you read <<url>>, and thoroughly and precisely check for **wrong assumptions**, **cheating**,
+**irreproducibility issues**, **fraud**, **potential for cheating in evaluation**
+and **security vulnerabilties**?  
+Use internet search extensively and do not believe what people say--verify them yourself.  
+Do not hesisate to download code and run them to validate results.
+For security vulnerabilties, create a POC and test it.  
+Generate an html report in PWD/sorcar_reported_frauds/ and open in the user's default browser.
 Thoroughly fact check everything you claim in the report.
 \end{prompt}
 In the prompt, replace <<url>> with the actual link to a blog, a paper, or a code repository.
