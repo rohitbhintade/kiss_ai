@@ -114,7 +114,7 @@ We initially built the KISS Agent Framework to rapidly prototype and experiment 
 
 The KISS Agent is the innermost execution unit.  It implements a standard ReAct loop~\citep{yao2023react} with the following characteristics.  Listing~\ref{lst:simple-agent} shows a complete, working agent in under ten lines of code.  The developer defines an ordinary Python function (\texttt{calculate}), instantiates a \texttt{KISSAgent}, and calls its \texttt{run} method with a model name, a prompt template, template arguments, and a list of tools.  The framework handles tool-schema generation, the ReAct loop, and budget tracking automatically.
 
-\begin{lstlisting}[style=kisspy,caption={A complete KISS agent with a single tool.},label={lst:simple-agent}]
+\begin{lstlisting}[style=kisspy,numbers=none,caption={A complete KISS agent with a single tool.},label={lst:simple-agent}]
 from kiss.core.kiss_agent import KISSAgent
 
 def calculate(expression: str) -> str:
