@@ -19,10 +19,7 @@
 \title{KISS Sorcar: A Stupidly-simple General-purpose and Software Engineering AI Assistant}
 
 \author{%
-  Koushik Sen \\
-  EECS Department, UC Berkeley\\
-  \texttt{ksen@berkeley.edu} \\
-}
+Koushik Sen \\ EECS Department, UC Berkeley\\ \texttt{ksen@berkeley.edu} \\ }
 
 \begin{document}
 
@@ -34,32 +31,13 @@
 
 
 \begin{abstract}
-Large language models can generate code and call tools with
-remarkable fluency, yet deploying them as practical software engineering
-assistants still expose stubborn gaps: finite context windows, single
-mistakes that derail entire sessions, agents that get stuck in dead ends,
-AI slop, and generated changes that are difficult to review or revert.
+Large language models can generate code and call tools with remarkable fluency, yet deploying them as practical software engineering assistants still expose stubborn gaps: finite context windows, single mistakes that derail entire sessions, agents that get stuck in dead ends, AI slop, and generated changes that are difficult to review or revert.
 
-We present \textbf{KISS Sorcar}, a general-purpose assistant and integrated development environment (IDE) built on top of the \textbf{KISS Agent Framework}, a 
-stupidly-simple AI agent framework of roughly 1,850~lines of
-code.  The framework addresses these gaps using a robust system prompt
-and through a five-layer agent hierarchy in which each layer adds exactly one concern: budget-tracked ReAct execution, automatic continuation across sub-sessions via summarization, coding, and browser tools with parallel sub-agents, persistent multi-turn chat with
-history recall, and git worktree isolation so every task runs on its own
-branch.  
+We present \textbf{KISS Sorcar}, a general-purpose assistant and integrated development environment (IDE) built on top of the \textbf{KISS Agent Framework}, a stupidly-simple AI agent framework of roughly 1,850~lines of code.  The framework addresses these gaps using a robust system prompt and through a five-layer agent hierarchy in which each layer adds exactly one concern: budget-tracked ReAct execution, automatic continuation across sub-sessions via summarization, coding, and browser tools with parallel sub-agents, persistent multi-turn chat with history recall, and git worktree isolation so every task runs on its own branch.
 
-To assess the power of the KISS agent framework, we implemented KISS Sorcar 
-as a free, open-source Visual Studio Code extension that runs locally and effectively 
-for long-horizon tasks, and supports browser automation, multimodal input, 
-and Docker containers.  
+To assess the power of the KISS agent framework, we implemented KISS Sorcar as a free, open-source Visual Studio Code extension that runs locally and effectively for long-horizon tasks, and supports browser automation, multimodal input, and Docker containers.
 
-In this research, we deliberately prioritize output quality over latency:  giving a frontier model adequate time to validate its own output---running linters, type checkers, and
-tests---dramatically reduces the low-quality code that plagues faster but
-less thorough agents.  The entire system was built using itself in 4.5 months,
-providing a continuous stress test in which any agent-introduced bug
-immediately impairs its own ability to work.  On Terminal~Bench~2.0, KISS
-Sorcar achieves a 62.2\% overall pass rate with Claude Opus~4.6,
-comparing favorably to Claude~Code (58\%) and Cursor Composer~2
-(61.7\%).
+In this research, we deliberately prioritize output quality over latency:  giving a frontier model adequate time to validate its own output---running linters, type checkers, and tests---dramatically reduces the low-quality code that plagues faster but less thorough agents.  The entire system was built using itself in 4.5 months, providing a continuous stress test in which any agent-introduced bug immediately impairs its own ability to work.  On Terminal~Bench~2.0, KISS Sorcar achieves a 62.2\% overall pass rate with Claude Opus~4.6, comparing favorably to Claude~Code (58\%) and Cursor Composer~2 (61.7\%).
 \end{abstract}
 
 %----------------------------------------------------------------------
@@ -69,23 +47,22 @@ comparing favorably to Claude~Code (58\%) and Cursor Composer~2
 
 Modern Large language models (LLMs), such as Anthropic's Claude Opus 4.6, OpenAI's GPT 5.4, and Google's Gemini 3.1, have demonstrated a remarkable ability to generate code, reason about software architecture, and use developer tools~\citep{chen2021evaluating,roziere2023code}.  A growing body of work has explored how to harness these capabilities for autonomous software engineering, from single-session agents that resolve GitHub issues~\citep{yang2024sweagent,wang2024openhands} to industrial products marketed as AI software and general assistants ~\citep{copilot2021,cursor2024,devin2024,claudecode2025,codex2025,openclaw2025}. Yet using an LLM as a practical software engineering or general assistant still exposes several stubborn gaps: context windows are finite, a single mistake can derail an entire session, agents get stuck in dead ends, models generate AI slop, and generated changes are difficult to review or revert once applied to a live codebase.
 
-We propose the \emph{KISS Agent Framework}, a stupidly simple AI agent framework containing around 1,850 lines of code.  We address the above-mentioned gaps through a robust system prompt (which we describe in depth in Section~\ref{sec:system-prompt}) and a five-layer agent hierarchy in which
-each layer solves exactly one concern:
+We propose the \emph{KISS Agent Framework}, a stupidly simple AI agent framework containing around 1,850 lines of code.  We address the above-mentioned gaps through a robust system prompt (which we describe in depth in Section~\ref{sec:system-prompt}) and a five-layer agent hierarchy in which each layer solves exactly one concern:
 
 \begin{enumerate}[nosep]
   \item \textbf{KISS Agent} --- budget-tracked
-    ReAct~\citep{yao2023react} loop with native function calling.
+ReAct~\citep{yao2023react} loop with native function calling.
   \item \textbf{Relentless Agent} --- automatic summarization and continuation 
-    across sub-sessions.
+across sub-sessions.
   \item \textbf{Sorcar Agent} --- coding tools, browser automation,
-    and parallel sub-agent execution.
+and parallel sub-agent execution.
   \item \textbf{Chat Sorcar Agent} --- persistent multi-turn chat
-    sessions with history recall.
+sessions with history recall.
   \item \textbf{Worktree Sorcar Agent} --- git worktree isolation so
-    every task runs on its own branch.
+every task runs on its own branch.
 \end{enumerate}
 
-The name ``KISS'' reflects the \emph{Keep It Simple, Stupid} design philosophy in software engineering: each layer is small, each concern is isolated, and the overall system avoids unnecessary abstraction.  
+The name ``KISS'' reflects the \emph{Keep It Simple, Stupid} design philosophy in software engineering: each layer is small, each concern is isolated, and the overall system avoids unnecessary abstraction.
 
 \begin{figure}[t]
 \centering
@@ -94,8 +71,7 @@ The name ``KISS'' reflects the \emph{Keep It Simple, Stupid} design philosophy i
 \label{fig:kiss-sorcar-screenshot}
 \end{figure}
 
-To access the power and capabilities of the KISS agent framework, we implement KISS Sorcar. KISS Sorcar is a general-purpose assistant and an integrated development environment (IDE) built on top of the KISS agent framework. It codes really well and works pretty fast.  We implemented KISS Sorcar as a Visual Studio Code extension and runs locally. It has full browser support (using open-source Chromium browser and Playwright), multimodal support, Docker container support, and OpenClaw-like features (whose discussion is beyond the scope of the paper). The good part is that KISS Sorcar is completely free and open-source; all one needs is a model API key from a major LLM provider, such as Anthropic.  We implemented this framework in roughly 4.5 months, and the repository is available at \url{https://github.com/ksenxx/kiss_ai}.
-The name ``Sorcar'' pays homage to P.~C.~Sorcar, the legendary Bengali magician, evoking the idea of an agent that performs feats that appear magical yet are grounded in disciplined engineering. 
+To access the power and capabilities of the KISS agent framework, we implement KISS Sorcar. KISS Sorcar is a general-purpose assistant and an integrated development environment (IDE) built on top of the KISS agent framework. It codes really well and works pretty fast.  We implemented KISS Sorcar as a Visual Studio Code extension and runs locally. It has full browser support (using open-source Chromium browser and Playwright), multimodal support, Docker container support, and OpenClaw-like features (whose discussion is beyond the scope of the paper). The good part is that KISS Sorcar is completely free and open-source; all one needs is a model API key from a major LLM provider, such as Anthropic.  We implemented this framework in roughly 4.5 months, and the repository is available at \url{https://github.com/ksenxx/kiss_ai}. The name ``Sorcar'' pays homage to P.~C.~Sorcar, the legendary Bengali magician, evoking the idea of an agent that performs feats that appear magical yet are grounded in disciplined engineering.
 
 In the project, we deliberately prioritize output quality over latency.  In our experience, using a weaker or cheaper model often forces the developer to discard the agent's work and retry, ultimately increasing the total cost of completing a task.  Conversely, giving a frontier model adequate time to validate its own output---running linters, type checkers, and tests before declaring success---dramatically reduces the ``slop'' (low-quality, subtly incorrect code) that plagues faster but less thorough agents.  We expect token costs and inference latencies to continue to fall~\citep {gao2025trae}, making this quality-first posture increasingly practical.  In the meantime, the code produced by our agent is consistently well-organized, simple, and idiomatic.
 
@@ -189,8 +165,7 @@ The trajectory of the agent is stored in the file: {trajectory_file}
 \label{sec:sorcar-agent}
 %......................................................................
 
-The Sorcar Agent adds the tools that make the system useful for
-software development and general-purpose automation.
+The Sorcar Agent adds the tools that make the system useful for software development and general-purpose automation.
 
 \textbf{Coding tools.}  We provide four core tools: a shell command executor with streaming output, a file reader, a precise string-based file editor, and a file writer.  The shell executor supports a configurable timeout, streams output to the user interface in real time, and respects a stop event that allows the user to cancel a running command.  Note that we kept the tool names (Bash, Edit, Write, Read) the same as those in Claude Code, because the underlying Anthropic models do not make mistakes with those tools.
 
@@ -200,8 +175,7 @@ software development and general-purpose automation.
 
 \textbf{User interaction.}  An ask-user-question tool allows the agent to pause execution and request clarification from the user.  In the VS~Code integration, this renders as a text input in the sidebar; in CLI mode, it reads from standard input.
 
-\textbf{Docker isolation.}  When a Docker image is specified, we replace the coding tools with Docker-aware variants that execute commands inside a container, providing an additional layer of
-sandboxing for untrusted tasks.
+\textbf{Docker isolation.}  When a Docker image is specified, we replace the coding tools with Docker-aware variants that execute commands inside a container, providing an additional layer of sandboxing for untrusted tasks.
 
 %......................................................................
 \subsection{Chat Sorcar Agent}
@@ -221,9 +195,7 @@ The Chat Sorcar Agent adds multi-turn conversation persistence.
 \label{sec:worktree-agent}
 %......................................................................
 
-The Worktree Sorcar Agent is the outermost layer and the one that
-users interact with in the VS~Code extension.  Its defining feature is
-git-worktree isolation.
+The Worktree Sorcar Agent is the outermost layer and the one that users interact with in the VS~Code extension.  Its defining feature is git-worktree isolation.
 
 \textbf{Branch-per-task.}  When a task starts, the agent creates a new git branch and a corresponding worktree directory.  The branch name encodes the chat ID and a timestamp for uniqueness.  All agent modifications happen inside the worktree; the user's main working tree remains untouched.
 
@@ -241,13 +213,13 @@ git-worktree isolation.
 \label{sec:evaluation}
 %----------------------------------------------------------------------
 
-Before we discuss a crucial aspect of KISS Sorcar, the system prompt, in a lengthy section, we describe the evaluation outcome of KISS Sorcar on the Terminal Bench 2.0, which was also recently used by the Cursor agent of Composer 2.0. 
+Before we discuss a crucial aspect of KISS Sorcar, the system prompt, in a lengthy section, we describe the evaluation outcome of KISS Sorcar on the Terminal Bench 2.0, which was also recently used by the Cursor agent of Composer 2.0.
 
 We evaluate our system on Terminal Bench~2.0,\footnote{\url{https://www.tbench.ai/}} a benchmark comprising 89 diverse terminal-based programming tasks, ranging from building legacy compilers and configuring servers to solving cryptanalysis challenges and training machine-learning models.  Each task runs in an isolated Docker container; a separate verifier automatically judges the result.  We use the Harbor\footnote{\url{https://github.com/harbor-framework/harbor}} framework to orchestrate execution, and Claude Opus~4.6 as the underlying LLM.  We do not modify the general system prompt or inject Terminal Bench 2.0-specific instructions during the evaluation.  We carried out our evaluation on a 2025 MacBook Air 15".
 
 \subsection{Setup}
 
-We run 5 independent trials per task.  The agent is \texttt{SorcarHarborAgent}, a thin Harbor adapter that installs and invokes the sorcar CLI inside each container.  We hard-skip 9 tasks that we verified to be infeasible for Opus~4.6 across 6+ prior attempts (e.g.\ CompCert compilation, Windows~3.11 GUI installation, video OCR) to save time and token cost.  Skipped tasks still count as failures. 
+We run 5 independent trials per task.  The agent is \texttt{SorcarHarborAgent}, a thin Harbor adapter that installs and invokes the sorcar CLI inside each container.  We hard-skip 9 tasks that we verified to be infeasible for Opus~4.6 across 6+ prior attempts (e.g.\ CompCert compilation, Windows~3.11 GUI installation, video OCR) to save time and token cost.  Skipped tasks still count as failures.
 
 \subsection{Aggregate Results}
 
@@ -286,8 +258,7 @@ The 62.2\% overall pass rate compares favorably to other agents using the same u
 
 \textbf{Mixed-result tasks (31 of 89).} Tasks such as \texttt{write-compressor} (3/5), \texttt{crack-7z-hash} (4/5), and \texttt{feal-linear-cryptanalysis} (4/5) succeed in most trials but occasionally fail due to non-determinism in the model's reasoning or timing-sensitive environment interactions.  Conversely, \texttt{cancel-async-tasks} (1/5) and \texttt{dna-assembly} (1/5) succeed rarely, suggesting they are at the boundary of the model's capability.
 
-\textbf{Leaderboard context.}  KISS Sorcar does not score as high as other coding agents reported at the Terminal Bench 2.0 leaderboard, but we believe that our results are cheat-free and honest, showing reasonable improvements over the Claude Code and Cursor agents.  
-Regarding low score compared to other coding agents, we wanted to note that recent analysis has found widespread cheating on popular agent benchmarks, including Terminal Bench~2.0: the top three submissions commit harness-level cheating (e.g.\ leaking verifier code or answer keys into the agent's environment), and task-level cheating (e.g.\ Googling answers, mining git history, hardcoding test outputs) affects 28+ submissions across 9 benchmarks~\citep{stein2026cheatingblog,stein2026detecting}. Separately, we discovered, using an automated benchmark audit agent, that 45 confirmed hacking solutions across 13 widely used benchmarks exhibited process-isolation failures, answer leakage, and weak test assertions that allow perfect scores without solving a single problem~\citep{wang2026trustworthyblog}.
+\textbf{Leaderboard context.}  KISS Sorcar does not score as high as other coding agents reported at the Terminal Bench 2.0 leaderboard, but we believe that our results are cheat-free and honest, showing reasonable improvements over the Claude Code and Cursor agents. Regarding low score compared to other coding agents, we wanted to note that recent analysis has found widespread cheating on popular agent benchmarks, including Terminal Bench~2.0: the top three submissions commit harness-level cheating (e.g.\ leaking verifier code or answer keys into the agent's environment), and task-level cheating (e.g.\ Googling answers, mining git history, hardcoding test outputs) affects 28+ submissions across 9 benchmarks~\citep{stein2026cheatingblog,stein2026detecting}. Separately, we discovered, using an automated benchmark audit agent, that 45 confirmed hacking solutions across 13 widely used benchmarks exhibited process-isolation failures, answer leakage, and weak test assertions that allow perfect scores without solving a single problem~\citep{wang2026trustworthyblog}.
 
 %----------------------------------------------------------------------
 \section{The System Prompt}
@@ -441,7 +412,7 @@ exhibited by LLM-generated code:
 
 \textbf{``No redundant abstractions or duplicate code.''}  LLMs sometimes create a new utility function or class that duplicates functionality already present in the codebase, because they did not read the existing code thoroughly.  This instruction reminds the model to check for existing implementations before creating new ones, and to factor out duplication when it encounters it.
 
-\textbf{``Public methods MUST have full documentation.''}  While the prompt generally discourages unnecessary documentation (see the last item), public methods are the API surface that other developers and modules depend on.  Documentation on public methods is not optional---it specifies the contract. 
+\textbf{``Public methods MUST have full documentation.''}  While the prompt generally discourages unnecessary documentation (see the last item), public methods are the API surface that other developers and modules depend on.  Documentation on public methods is not optional---it specifies the contract.
 
 \textbf{``Understand the root cause of an issue or bug, and patch the root cause instead of an ad hoc superficial fix.''}  LLMs frequently apply symptom-level fixes: adding a null check where the real problem is that a variable should never be null, or catching an exception where the real problem is that the caller passes invalid arguments.  This instruction forces the model to trace the causal chain to the root and fix it there.
 
@@ -555,8 +526,7 @@ The testing section is perhaps the most opinionated:
 \subsection{Self-Improvement Loop}
 %......................................................................
 
-The agent maintains a preferences file that captures user invariants
-discovered during task execution:
+The agent maintains a preferences file that captures user invariants discovered during task execution:
 
 \begin{prompt}
 ## Self-Improvement Loop
@@ -646,8 +616,7 @@ The login instruction addresses a practical obstacle in web research: many websi
 \subsection{Desktop Application Control}
 %......................................................................
 
-The agent can interact with graphical desktop applications using
-screenshots, keyboard, and mouse:
+The agent can interact with graphical desktop applications using screenshots, keyboard, and mouse:
 
 \begin{prompt}
 ## Launch desktop apps
@@ -713,8 +682,7 @@ Our extension maintains a \texttt{USER\_PREFS.md} file that the agent reads at t
 
 AI coding assistants typically operate on a subscription model (Copilot, Cursor) or a per-seat pricing model (Devin, Windsurf), both of which obscure the per-task cost.  The developer has no visibility into how many tokens a task consumed or how much it cost.
 
-Our extension displays real-time cost tracking in the sidebar: input tokens, output tokens, cache hits, dollar cost, and elapsed time are updated at every agent step.  We enforce both per-task and global budget ceilings.  If a task exceeds its budget, the agent raises a hard error rather than silently accumulating charges.  This transparency allows developers to make informed decisions about which tasks to delegate to the AI and how to structure prompts for cost
-efficiency.  The KISS Agent also appends the current usage in the context so that the model is fully aware of its limits.
+Our extension displays real-time cost tracking in the sidebar: input tokens, output tokens, cache hits, dollar cost, and elapsed time are updated at every agent step.  We enforce both per-task and global budget ceilings.  If a task exceeds its budget, the agent raises a hard error rather than silently accumulating charges.  This transparency allows developers to make informed decisions about which tasks to delegate to the AI and how to structure prompts for cost efficiency.  The KISS Agent also appends the current usage in the context so that the model is fully aware of its limits.
 
 %......................................................................
 \subsection{Integrated Browser Automation}
@@ -781,169 +749,34 @@ to review the modified and new files in the original branch. Fix it.
 \label{sec:related}
 %----------------------------------------------------------------------
 
-\textbf{Code-specialized language models.}
-Beyond the general-purpose LLMs that our system can use as backends, 
-a rich line of work has produced models specifically trained for code. 
-Code Llama~\citep{roziere2023code} fine-tunes Llama~2 for code generation 
-and infilling. StarCoder~\citep{li2023starcoder} trains on permissively 
-licensed code from GitHub with a fill-in-the-middle objective. 
-DeepSeek-Coder~\citep{guo2024deepseek} trains on a 2-trillion-token corpus 
-of code and natural language with a repository-level context window.
-More recently, frontier models have been optimized specifically for
-agentic software engineering.
-Claude Opus~4.6~\citep{anthropic2026opus46} advances long-horizon
-coding and agentic task execution.
-Cursor released Composer~2~\citep{cursor2026composer2}, a custom
-fine-tuned coding model trained with large-scale reinforcement learning.
-Kimi K2.5~\citep{kimiteam2026k25} is an open-source multimodal agentic
-model that jointly optimizes text and vision and introduces Agent Swarm
-for parallel task decomposition.
-GLM-5.1~\citep{zai2026glm51} is a 754-billion-parameter
-mixture-of-experts model from Z.ai that sustains autonomous coding over
-multi-hour sessions, achieving state-of-the-art on SWE-Bench~Pro.
-Our system is model-agnostic and can leverage any of these models through its 
-pluggable LLM backend, benefiting from advances in code-specialized 
-pre-training without architectural changes.
+\textbf{Code-specialized language models.} Beyond the general-purpose LLMs that our system can use as backends, a rich line of work has produced models specifically trained for code. Code Llama~\citep{roziere2023code} fine-tunes Llama~2 for code generation and infilling. StarCoder~\citep{li2023starcoder} trains on permissively licensed code from GitHub with a fill-in-the-middle objective. DeepSeek-Coder~\citep{guo2024deepseek} trains on a 2-trillion-token corpus of code and natural language with a repository-level context window. More recently, frontier models have been optimized specifically for agentic software engineering. Claude Opus~4.6~\citep{anthropic2026opus46} advances long-horizon coding and agentic task execution. Cursor released Composer~2~\citep{cursor2026composer2}, a custom fine-tuned coding model trained with large-scale reinforcement learning. Kimi K2.5~\citep{kimiteam2026k25} is an open-source multimodal agentic model that jointly optimizes text and vision and introduces Agent Swarm for parallel task decomposition. GLM-5.1~\citep{zai2026glm51} is a 754-billion-parameter mixture-of-experts model from Z.ai that sustains autonomous coding over multi-hour sessions, achieving state-of-the-art on SWE-Bench~Pro. Our system is model-agnostic and can leverage any of these models through its pluggable LLM backend, benefiting from advances in code-specialized pre-training without architectural changes.
 
-\textbf{Code generation agents.}
-SWE-Agent~\citep{yang2024sweagent} and
-OpenHands~\citep{wang2024openhands} provides LLM-based agents for resolving software engineering tasks such as GitHub issues.  Both use a single-session execution model without automatic continuation. Agentless~\citep{xia2024agentless} takes the opposite approach, showing that a simple two-phase localize-then-repair pipeline without autonomous agent loops can achieve competitive results on SWE-bench~\citep{jimenez2024swebench}.  Devin~\citep{devin2024}, an industrial product marketed as ``the first AI software engineer,'' operates in a sandboxed environment with shell, browser, and editor access.  Aider~\citep{aider2023} provides a terminal-based pair programming interface with tight git integration, automatically committing each change.  Our Relentless Agent layer addresses the single-session limitation shared by most of these systems, while our worktree isolation provides stronger safety guarantees than per-change commits.
+\textbf{Code generation agents.} SWE-Agent~\citep{yang2024sweagent} and OpenHands~\citep{wang2024openhands} provides LLM-based agents for resolving software engineering tasks such as GitHub issues.  Both use a single-session execution model without automatic continuation. Agentless~\citep{xia2024agentless} takes the opposite approach, showing that a simple two-phase localize-then-repair pipeline without autonomous agent loops can achieve competitive results on SWE-bench~\citep{jimenez2024swebench}.  Devin~\citep{devin2024}, an industrial product marketed as ``the first AI software engineer,'' operates in a sandboxed environment with shell, browser, and editor access.  Aider~\citep{aider2023} provides a terminal-based pair programming interface with tight git integration, automatically committing each change.  Our Relentless Agent layer addresses the single-session limitation shared by most of these systems, while our worktree isolation provides stronger safety guarantees than per-change commits.
 
-\textbf{ReAct and tool use.}
-The ReAct framework~\citep{yao2023react} interleaves reasoning and action.  
-Toolformer~\citep{schick2023toolformer} teaches models to use tools via 
-self-supervised learning.  We use native function calling provided by modern
- LLM APIs rather than in-context tool descriptions, which reduces prompt overhead 
- and improves reliability.
+\textbf{ReAct and tool use.} The ReAct framework~\citep{yao2023react} interleaves reasoning and action. Toolformer~\citep{schick2023toolformer} teaches models to use tools via self-supervised learning.  We use native function calling provided by modern LLM APIs rather than in-context tool descriptions, which reduces prompt overhead and improves reliability.
 
-\textbf{Reasoning and planning.} Chain-of-thought prompting~\citep{wei2022chain} 
-demonstrated that eliciting step-by-step reasoning dramatically improves LLM 
-performance on complex tasks.  Tree of Thoughts~\citep{yao2024tree} generalizes 
-this to deliberate search over multiple reasoning paths. 
-Reflexion~\citep{shinn2023reflexion} introduces verbal reinforcement
-learning, where an agent reflects on failed attempts and produces self-critiques 
-that improve subsequent trials.  Our continuation protocol is conceptually related
-to Reflexion: failed sub-sessions produce summaries that inform subsequent attempts.  
-However, in our case, we use the summaries to continue the task.
+\textbf{Reasoning and planning.} Chain-of-thought prompting~\citep{wei2022chain} demonstrated that eliciting step-by-step reasoning dramatically improves LLM performance on complex tasks.  Tree of Thoughts~\citep{yao2024tree} generalizes this to deliberate search over multiple reasoning paths. Reflexion~\citep{shinn2023reflexion} introduces verbal reinforcement learning, where an agent reflects on failed attempts and produces self-critiques that improve subsequent trials.  Our continuation protocol is conceptually related to Reflexion: failed sub-sessions produce summaries that inform subsequent attempts. However, in our case, we use the summaries to continue the task.
 
-\textbf{Multi-agent software development.}
-ChatDev~\citep{qian2024chatdev} models the software development process as a 
-conversation between role-playing agents (CEO, CTO, programmer, tester) organized 
-in a waterfall-like pipeline. MetaGPT~\citep{hong2024metagpt} takes a 
-meta-programming approach, encoding standard operating procedures as structured 
-outputs that coordinate specialized agents. AutoGen~\citep{wu2023autogen} provides
-a general-purpose framework for multi-agent conversation, enabling flexible topologies
-beyond fixed pipelines.  These systems focus on generating entire applications from 
-scratch.  We take a different approach: rather than simulating an organization of 
-specialists, we use a single agent with broad access to tools and optional parallel 
-sub-agents for embarrassingly parallel sub-tasks, prioritizing practical utility on 
-real-world codebases over role-playing fidelity.
+\textbf{Multi-agent software development.} ChatDev~\citep{qian2024chatdev} models the software development process as a conversation between role-playing agents (CEO, CTO, programmer, tester) organized in a waterfall-like pipeline. MetaGPT~\citep{hong2024metagpt} takes a meta-programming approach, encoding standard operating procedures as structured outputs that coordinate specialized agents. AutoGen~\citep{wu2023autogen} provides a general-purpose framework for multi-agent conversation, enabling flexible topologies beyond fixed pipelines.  These systems focus on generating entire applications from scratch.  We take a different approach: rather than simulating an organization of specialists, we use a single agent with broad access to tools and optional parallel sub-agents for embarrassingly parallel sub-tasks, prioritizing practical utility on real-world codebases over role-playing fidelity.
 
-\textbf{Multi-turn autonomous agents.}
-AutoGPT~\citep{autogpt2023} and BabyAGI~\citep{babyagi2023} implement multi-step 
-autonomous agents.  These systems typically lack budget controls and safe code 
-isolation.  Our layered architecture addresses each of these concerns in a 
-dedicated layer.
+\textbf{Multi-turn autonomous agents.} AutoGPT~\citep{autogpt2023} and BabyAGI~\citep{babyagi2023} implement multi-step autonomous agents.  These systems typically lack budget controls and safe code isolation.  Our layered architecture addresses each of these concerns in a dedicated layer.
 
 
-\textbf{Software engineering benchmarks.} SWE-bench~\citep{jimenez2024swebench} 
-evaluates agents on real-world GitHub issues drawn from popular Python repositories, 
-requiring the agent to localize and fix bugs given only the issue description.  
-It has become the de facto standard for measuring agent capabilities in software 
-engineering. HumanEval~\citep{chen2021evaluating} and MBPP~\citep{austin2021program} 
-evaluate function-level code generation from docstrings.
-LiveCodeBench~\citep{jain2024livecodebench} addresses benchmark contamination
-by continuously collecting fresh competition problems from LeetCode, AtCoder,
-and CodeForces, and extends evaluation to self-repair, code execution, and
-test output prediction.  These benchmarks focus on isolated coding problems;
-We target the broader workflow of multi-file, multi-step software engineering
-tasks that require tool use, testing, and version control.
+\textbf{Software engineering benchmarks.} SWE-bench~\citep{jimenez2024swebench} evaluates agents on real-world GitHub issues drawn from popular Python repositories, requiring the agent to localize and fix bugs given only the issue description. It has become the de facto standard for measuring agent capabilities in software engineering. HumanEval~\citep{chen2021evaluating} and MBPP~\citep{austin2021program} evaluate function-level code generation from docstrings. LiveCodeBench~\citep{jain2024livecodebench} addresses benchmark contamination by continuously collecting fresh competition problems from LeetCode, AtCoder, and CodeForces, and extends evaluation to self-repair, code execution, and test output prediction.  These benchmarks focus on isolated coding problems; We target the broader workflow of multi-file, multi-step software engineering tasks that require tool use, testing, and version control.
 
-\textbf{Agent frameworks and orchestration.} LangChain~\citep{langchain2022} provides modular abstractions for building LLM applications, including agent loops, tool integration, and memory. It focuses on composability and breadth of integrations rather than on the specific concerns of software development.  Our architecture is purpose-built for software engineering, with each layer addressing a specific practical concern (budget tracking, continuation, code safety) rather than providing general-purpose
-primitives.
+\textbf{Agent frameworks and orchestration.} LangChain~\citep{langchain2022} provides modular abstractions for building LLM applications, including agent loops, tool integration, and memory. It focuses on composability and breadth of integrations rather than on the specific concerns of software development.  Our architecture is purpose-built for software engineering, with each layer addressing a specific practical concern (budget tracking, continuation, code safety) rather than providing general-purpose primitives.
 
-\textbf{LLM agent surveys.}
-Several comprehensive surveys have mapped the rapidly growing
-landscape of LLM-based agents.
-\citet{xi2023rise} survey the design space of LLM agents along
-three dimensions --- brain (reasoning), perception (input modalities),
-and action (tool use) --- and catalog applications across social
-science, natural science, and engineering.
-\citet{wang2024survey} propose a systematic framework for autonomous
-agents built on LLMs, covering profile, memory, planning, and action
-modules.  Our system can be understood through the lens of these
-frameworks: the KISS Agent implements the action loop, the Relentless
-Agent addresses the memory and planning concerns through continuation
-summaries, and the system prompt encodes the profile.
+\textbf{LLM agent surveys.} Several comprehensive surveys have mapped the rapidly growing landscape of LLM-based agents. \citet{xi2023rise} survey the design space of LLM agents along three dimensions --- brain (reasoning), perception (input modalities), and action (tool use) --- and catalog applications across social science, natural science, and engineering. \citet{wang2024survey} propose a systematic framework for autonomous agents built on LLMs, covering profile, memory, planning, and action modules.  Our system can be understood through the lens of these frameworks: the KISS Agent implements the action loop, the Relentless Agent addresses the memory and planning concerns through continuation summaries, and the system prompt encodes the profile.
 
-\textbf{IDE integration.}
-GitHub Copilot~\citep{copilot2021}, Cursor~\citep{cursor2024}, and
-Windsurf~\citep{windsurf2024} provide AI assistance within editors.
-Cursor recently released Composer~2~\citep{cursor2026composer2}, a
-custom fine-tuned coding model trained with large-scale reinforcement
-learning that achieves 61.7\% on Terminal Bench~2.0.
-These tools typically operate at the level of code completion or
-single-turn chat.  We operate at the level of autonomous
-multi-step task execution with full tool access and git-level
-isolation.
+\textbf{IDE integration.} GitHub Copilot~\citep{copilot2021}, Cursor~\citep{cursor2024}, and Windsurf~\citep{windsurf2024} provide AI assistance within editors. Cursor recently released Composer~2~\citep{cursor2026composer2}, a custom fine-tuned coding model trained with large-scale reinforcement learning that achieves 61.7\% on Terminal Bench~2.0. These tools typically operate at the level of code completion or single-turn chat.  We operate at the level of autonomous multi-step task execution with full tool access and git-level isolation.
 
-\textbf{Recent advances in agentic software engineering.}
-The field has matured rapidly since late 2025.
-\citet{hassan2025agentic} articulate the foundational pillars of
-\emph{Agentic Software Engineering} (SE~3.0), defining a research
-roadmap that emphasizes trust, controllability, and goal-oriented task
-decomposition.  \citet{li2025rise} survey the landscape of autonomous
-coding agents and characterize the transition from assistive code
-completion to full-fledged AI teammates that initiate, plan, and
-execute development tasks.  We instantiate several of the principles
-advocated in these roadmaps, including layered controllability (via
-budget tracking and step limits) and safe isolation (via worktrees).
+\textbf{Recent advances in agentic software engineering.} The field has matured rapidly since late 2025. \citet{hassan2025agentic} articulate the foundational pillars of \emph{Agentic Software Engineering} (SE~3.0), defining a research roadmap that emphasizes trust, controllability, and goal-oriented task decomposition.  \citet{li2025rise} survey the landscape of autonomous coding agents and characterize the transition from assistive code completion to full-fledged AI teammates that initiate, plan, and execute development tasks.  We instantiate several of the principles advocated in these roadmaps, including layered controllability (via budget tracking and step limits) and safe isolation (via worktrees).
 
-\citet{wang2025agentic} provide a comprehensive survey of AI agentic
-programming techniques, cataloging how LLM-based agents decompose
-goals, interact with compilers and version control systems, and
-self-correct through feedback loops.
-\citet{chatlatanagulchai2025readmes} study \emph{agent context files}
---- persistent, project-level instruction files that guide agentic
-coding tools --- and find that high-quality context files significantly
-improve agent performance.  Our layered system prompt and
-\texttt{SORCAR.md} override mechanism are instances of this pattern.
-\citet{mohsenimofidi2025context} further investigate context
-engineering for AI agents in open-source software, highlighting how
-curated context improves agent efficacy on repository-level tasks.
+\citet{wang2025agentic} provide a comprehensive survey of AI agentic programming techniques, cataloging how LLM-based agents decompose goals, interact with compilers and version control systems, and self-correct through feedback loops. \citet{chatlatanagulchai2025readmes} study \emph{agent context files} --- persistent, project-level instruction files that guide agentic coding tools --- and find that high-quality context files significantly improve agent performance.  Our layered system prompt and \texttt{SORCAR.md} override mechanism are instances of this pattern. \citet{mohsenimofidi2025context} further investigate context engineering for AI agents in open-source software, highlighting how curated context improves agent efficacy on repository-level tasks.
 
-\textbf{Evolving benchmarks for coding agents.}
-SWE-bench Pro~\citep{deng2025swebenchpro} introduces a substantially
-more challenging benchmark with 1,865 long-horizon problems drawn from
-41 repositories, including commercial codebases, explicitly targeting
-enterprise-level complexity beyond the original SWE-bench.  These
-long-horizon tasks --- often requiring multi-file patches and hours of
-professional developer effort --- directly motivate our continuation
-mechanism.  \citet{prathifkumar2025swebenchverified}
-raise the important question of benchmark contamination, showing that
-overlap between SWE-Bench-Verified problems and LLM training data may
-inflate scores, suggesting that high benchmark numbers may partly
-reflect memorization rather than genuine problem-solving ability.
-\citet{horikawa2025agentic} provide an empirical study of how
-AI coding agents handle refactoring tasks, finding that while agents
-can plan and execute complex refactorings, they still struggle with
-cross-file dependency analysis --- a challenge that our sub-agent
-parallelism partially addresses.
+\textbf{Evolving benchmarks for coding agents.} SWE-bench Pro~\citep{deng2025swebenchpro} introduces a substantially more challenging benchmark with 1,865 long-horizon problems drawn from 41 repositories, including commercial codebases, explicitly targeting enterprise-level complexity beyond the original SWE-bench.  These long-horizon tasks --- often requiring multi-file patches and hours of professional developer effort --- directly motivate our continuation mechanism.  \citet{prathifkumar2025swebenchverified} raise the important question of benchmark contamination, showing that overlap between SWE-Bench-Verified problems and LLM training data may inflate scores, suggesting that high benchmark numbers may partly reflect memorization rather than genuine problem-solving ability. \citet{horikawa2025agentic} provide an empirical study of how AI coding agents handle refactoring tasks, finding that while agents can plan and execute complex refactorings, they still struggle with cross-file dependency analysis --- a challenge that our sub-agent parallelism partially addresses.
 
-\textbf{Self-improvement and test-time scaling.}
-\citet{robeyns2025selfimproving} demonstrate a self-improving coding
-agent that iteratively refines its own scaffolding code, achieving
-dramatic benchmark improvements through self-generated optimizations.
-Our self-improvement loop (via \texttt{USER\_PREFS.md}) captures a
-lighter-weight form of this idea: rather than rewriting its own code,
-the agent accumulates learned user preferences and project
-invariants across sessions.  \citet{gao2025trae} introduce the Trae
-Agent, which applies test-time compute scaling to software engineering,
-dynamically allocating more inference budget to harder problems.  Our
-budget-tracking mechanism provides a complementary perspective: rather
-than scaling compute adaptively, we enforce hard
-budget ceilings while the Relentless Agent ensures maximum progress
-within those bounds.
+\textbf{Self-improvement and test-time scaling.} \citet{robeyns2025selfimproving} demonstrate a self-improving coding agent that iteratively refines its own scaffolding code, achieving dramatic benchmark improvements through self-generated optimizations. Our self-improvement loop (via \texttt{USER\_PREFS.md}) captures a lighter-weight form of this idea: rather than rewriting its own code, the agent accumulates learned user preferences and project invariants across sessions.  \citet{gao2025trae} introduce the Trae Agent, which applies test-time compute scaling to software engineering, dynamically allocating more inference budget to harder problems.  Our budget-tracking mechanism provides a complementary perspective: rather than scaling compute adaptively, we enforce hard budget ceilings while the Relentless Agent ensures maximum progress within those bounds.
 
 %----------------------------------------------------------------------
 \section{Conclusion}
@@ -954,14 +787,12 @@ We have shown that a layered, single-concern architecture can address the practi
 
 We complement the architecture with a system prompt that encodes engineering discipline directly into the agent's behavior: read before writing, test before fixing, plan before executing, verify before finishing.  These are not novel insights---they are the practices of careful software engineering, translated into instructions that an LLM can follow.  The evaluation suggests that giving a frontier model the time and tools to validate its own output matters more than model-level customization.
 
-Finally, our experience building KISS Sorcar suggests that we are in the Golden Age of Experts. If someone is an expert in some particular domain and knows how to use Claude Opus 4.6 or a newer model effectively, they are the King. While implementing KISS and KISS Sorcar, we read the thinking tokens of Claude Opus 4.6, and we found it to be way more intelligent than anything or anyone we have encountered in the past. In fact, we found that Opus 4.6 is so intelligent that we feel that we are the bottleneck.  We are exploring and exploiting Opus 4.6 and see "what is possible".  We see that several academic research efforts will be obsolete in the future because Opus 4.6 can do them better with the right instructions.  We see that people will be writing and customizing their own software to meet their needs rather than relying on large software vendors.  We have to forget much conventional wisdom if we want to make big strides.  Hopefully, in 3-5 years, this expert knowledge will be incorporated into the best frontier model--the future will be bright for AI experts and bleak for the rest of the people.  
+Finally, our experience building KISS Sorcar suggests that we are in the Golden Age of Experts. If someone is an expert in some particular domain and knows how to use Claude Opus 4.6 or a newer model effectively, they are the King. While implementing KISS and KISS Sorcar, we read the thinking tokens of Claude Opus 4.6, and we found it to be way more intelligent than anything or anyone we have encountered in the past. In fact, we found that Opus 4.6 is so intelligent that we feel that we are the bottleneck.  We are exploring and exploiting Opus 4.6 and see "what is possible".  We see that several academic research efforts will be obsolete in the future because Opus 4.6 can do them better with the right instructions.  We see that people will be writing and customizing their own software to meet their needs rather than relying on large software vendors.  We have to forget much conventional wisdom if we want to make big strides.  Hopefully, in 3-5 years, this expert knowledge will be incorporated into the best frontier model--the future will be bright for AI experts and bleak for the rest of the people.
 
-While using it, we found that we don't spend much time working.  We are mostly getting bored. Although many experts suggest that AI will be harmful if it falls into the wrong hands without proper security and safety guardrails, we believe the biggest problem will be mental health issues, which could end human civilization if not properly addressed in advance.  
+While using it, we found that we don't spend much time working.  We are mostly getting bored. Although many experts suggest that AI will be harmful if it falls into the wrong hands without proper security and safety guardrails, we believe the biggest problem will be mental health issues, which could end human civilization if not properly addressed in advance.
 
 \section*{An Important Advice} We found that researchers are publishing 
-lots of papers on AI and it is hard to keep track of them or validate their claim.
-We propose to use the following prompt with KISS Sorcar to identify issues 
-in blogs, papers, and code repositories:
+lots of papers on AI and it is hard to keep track of them or validate their claim. We propose to use the following prompt with KISS Sorcar to identify issues in blogs, papers, and code repositories:
 
 \begin{prompt}
 Can you read <<url>> and check for wrong assumptions, wrong results, 
@@ -972,23 +803,13 @@ Do not hesisate to download code and run them to validate results.
 Generate an html report in PWD/sorcar_reported_frauds/. 
 Thoroughly fact check everything you claim in the report.
 \end{prompt}
-In the prompt, replace <<url>> with the actual link to a blog, a paper, 
-or a code repository.
+In the prompt, replace <<url>> with the actual link to a blog, a paper, or a code repository.
 
 \section*{Acknowledgments}
 
-This research is supported in part by gifts from Accenture, Amazon, AMD, 
-Anyscale, Broadcom, Google, IBM, Intel, Intesa Sanpaolo, Lambda, Lightspeed, 
-Mibura, NVIDIA, Samsung SDS, SAP, by the U.S. Department of Energy, Office of Science, 
-Office of Advanced Scientific Computing Research through the X-STACK: Programming 
-Environments for Scientific Computing program (DESC0021982,) and the Defense Advanced 
-Research Projects Agency (DARPA) under Agreement No. HR00112590134. 
+This research is supported in part by gifts from Accenture, Amazon, AMD, Anyscale, Broadcom, Google, IBM, Intel, Intesa Sanpaolo, Lambda, Lightspeed, Mibura, NVIDIA, Samsung SDS, SAP, by the U.S. Department of Energy, Office of Science, Office of Advanced Scientific Computing Research through the X-STACK: Programming Environments for Scientific Computing program (DESC0021982,) and the Defense Advanced Research Projects Agency (DARPA) under Agreement No. HR00112590134.
 
-We would like to thank Marius Momeu for finding critical bugs in the cost computation and
-in the UI usability, Yogya Mehrotra for testing and fixing bugs in the OpenClaw like
-channels in KISS Sorcar; Debabrata Dash, Yiwei Hou, Kaiyao Ke, Muxi Lyu, Anoop Mishra, 
-Manish Shetty, Ion Stoica, Shangyin Tan, Hao Wang, and Matei Zaharia for various 
-useful feedback.
+We would like to thank Marius Momeu for finding critical bugs in the cost computation and in the UI usability, Yogya Mehrotra for testing and fixing bugs in the OpenClaw like channels in KISS Sorcar; Debabrata Dash, Yiwei Hou, Kaiyao Ke, Muxi Lyu, Anoop Mishra, Manish Shetty, Ion Stoica, Shangyin Tan, Hao Wang, and Matei Zaharia for various useful feedback.
 
 Disclaimer: The paper has been edited in part using KISS Sorcar, an AI tool.
 
@@ -997,8 +818,7 @@ Disclaimer: The paper has been edited in part using KISS Sorcar, an AI tool.
 %----------------------------------------------------------------------
 
 
-{
-\small
+{ \small
 
 \bibliographystyle{plainnat}
 \bibliography{kiss_sorcar}
