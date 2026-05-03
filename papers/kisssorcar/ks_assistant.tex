@@ -118,6 +118,8 @@ print(result)  # 127.05
 
 \textbf{Non-agentic mode.}  When tools are not needed, the agent runs a single generation without the ReAct loop, useful for summarization sub-tasks.
 
+Listing~\ref{lst:simple-agent} shows a complete, working agent in under ten lines of code.  The developer defines an ordinary Python function (\texttt{calculate}), instantiates a \texttt{KSAgent}, and calls its \texttt{run} method with a model name, a prompt template, template arguments, and a list of tools.  The framework automatically handles tool-schema generation, the ReAct loop, and budget tracking.
+
 The KS Agent is stateless across runs: each call resets the conversation, token counters, and tool registry, making it safe to reuse a single instance for multiple sequential tasks.
 
 %......................................................................
@@ -127,11 +129,53 @@ The KS Agent is stateless across runs: each call resets the conversation, token 
 
 The Relentless Agent wraps a KS Agent in a continuation loop.  Its core contribution is executing tasks that exceed a single context window by breaking them into sub-sessions.
 
-Rather than investing in context-compaction techniques, we adopt a simple continuation protocol: when a sub-session exhausts its context window or step budget, the agent produces a \emph{structured summary} of every action taken so far---chronologically ordered, with explanations and relevant code snippets---and a fresh sub-session resumes from that summary.  This approach is related to Reflexion~\citep{shinn2023reflexion}, which feeds verbal self-critiques back into subsequent trials, but uses a Reflexion-like technique to \emph{continue} a task rather than retry it.  We found that a na\"ive instruction to ``summarize the current context'' produced poor continuations; requiring a \emph{step-by-step chronological account with code snippets} dramatically improved coherence across sub-sessions.
+Rather than investing in context-compaction techniques, we adopt a simple continuation protocol: when a sub-session exhausts its context window or step budget, the agent produces a \emph{structured summary} of every action taken so far---chronologically ordered, with explanations and relevant code snippets---and a fresh sub-session resumes from that summary.  This approach is related to Reflexion~\citep{shinn2023reflexion}, which feeds verbal self-critiques back into subsequent trials, but uses a Reflexion-like technique to \emph{continue} a task rather than retry it.  We found that a na\"ive instruction to ``summarize the current context'' produced poor continuations; requiring a \emph{step-by-step chronological account with code snippets} dramatically improved coherence across sub-sessions.  A potential limitation is that summaries may grow unwieldy for multi-day tasks; in practice, we have not encountered this problem even for tasks spanning several hours, but a thorough evaluation of summary scaling remains future work.
 
-\textbf{Continuation protocol.}  The \texttt{finish} tool accepts three fields: a success flag, a continue flag, and a summary.  When \texttt{is\_continue=True}, the Relentless Agent starts a new sub-session with a fresh context window containing all prior attempt summaries.
+\textbf{Continuation protocol.}  The \texttt{finish} tool accepts three fields: a success flag, a continue flag, and a summary.  When \texttt{is\_continue=True}, the Relentless Agent starts a new sub-session with a fresh context window.  The prompt for the new session includes a chronologically ordered list of all prior attempt summaries and instructs the agent not to redo completed work:
 
-\textbf{Forced continuation on failure.}  If a sub-session raises an exception (e.g., the step limit is hit before calling finish), the Relentless Agent saves the full trajectory to a temporary file, spawns a separate summarizer agent to produce a concise summary, and uses that summary as the progress text for the next sub-session.  This ensures that even crashed sessions contribute useful context.
+\begin{prompt}
+# Task Progress (Continuation {continuation_number})
+
+{progress_text}
+
+# Continue
+- Complete the rest of the task.
+- **DON'T** redo completed work.
+- If you have been retrying the same approach without
+  progress, step back and rethink the strategy from
+  scratch.
+\end{prompt}
+
+\textbf{Forced continuation on failure.}  If a sub-session raises an exception (e.g., the step limit is hit before calling finish), the Relentless Agent saves the full trajectory to a temporary file, spawns a separate summarizer agent to produce a concise summary, and uses that summary as the progress text for the next sub-session.  This ensures that even crashed sessions contribute useful context.  The summarizer receives the following prompt:
+
+\begin{prompt}
+# Summarizer
+
+The trajectory of the agent is stored in the file:
+{trajectory_file}
+
+# Instructions
+- Read the trajectory file and analyze it.  The trajectory
+  file could be large.
+- Return a precise chronologically-ordered list of things
+  the agent did, with the reason for doing that, along
+  with relevant code snippets
+\end{prompt}
+
+\textbf{Pre-emptive continuation.}  To force the agent to self-continue before exhausting its step budget, the system prompt is augmented with a step-threshold instruction:
+
+\begin{prompt}
+# MOST IMPORTANT INSTRUCTIONS
+- **At step {step_threshold}: you MUST call
+  finish(success=False, is_continue=True,
+  summary="precise chronologically-ordered list of things
+  the agent did with the reason for doing that along with
+  relevant code snippets")** or if the task is not complete
+  and you are at risk of running out of steps or context
+  length.
+\end{prompt}
+
+\noindent This instruction is injected near the end of the budget window.  Without it, the agent exhibits a ``rush to finish'' behavior when steps are running low---skipping verification, making hasty edits, and calling \texttt{finish} with an incomplete result.  The explicit step threshold redirects that urgency into the continuation protocol, ensuring that a clean handoff to a new sub-session produces better results than a frantic attempt to squeeze everything into the remaining steps.
 
 %......................................................................
 \subsection{Tool Agent}
@@ -144,7 +188,7 @@ The Tool Agent adds the tools that make the system useful for software developme
 
 \textbf{Browser automation.}  A web-use tool provides programmatic browser control: navigating to URLs, reading page accessibility trees, clicking elements, typing text, pressing keys, scrolling, and taking screenshots.  It uses the open-source Chromium browser via the Playwright library.
 
-\textbf{Parallel sub-agents.}  An optional parallel execution tool spawns independent Tool Agent instances in a thread pool.  Each sub-agent gets its own LLM context and tool set, useful for embarrassingly parallel tasks such as summarizing multiple files or researching independent topics.
+\textbf{Parallel sub-agents.}  An optional parallel execution tool spawns independent Tool Agent instances in a thread pool.  Each sub-agent gets its own LLM context and tool set, useful for embarrassingly parallel tasks such as summarizing multiple files or researching independent topics.  Results are collected and returned in input order.  This tool is not activated by default because the IDE cannot stream multiple agent outputs coherently in the chat window.
 
 \textbf{User interaction.}  An ask-user-question tool pauses execution and requests clarification from the user.
 
@@ -162,6 +206,10 @@ The Chat Agent adds multi-turn conversation persistence.
 \textbf{Bounded chat context.}  The agent caps in-context history entries at $K=10$.  When the cap is exceeded, it preserves the first two entries (which establish the user's intent) and the most recent entries, dropping the middle entries least likely to be referenced.
 
 \textbf{Session management.}  Three operations are supported: starting a new chat, resuming by task description, and resuming by explicit chat ID.
+
+\textbf{Frequent task tracking.}  Each time a task is executed, the agent records the task description in a frequency table.  The IDE sidebar surfaces the most frequent tasks so users can re-issue them with one click, turning recurring requests (``run the test suite,'' ``regenerate the changelog'') into a click-to-replay experience.
+
+\textbf{Metadata persistence.}  After each task, the agent records metadata including the model used, working directory, software version, token counts, cost, and whether the task used parallel execution or worktree isolation.  This audit trail supports cost analysis and debugging.
 
 %......................................................................
 \subsection{Worktree Agent}
@@ -224,9 +272,9 @@ The 62.2\% overall pass rate compares favorably to other agents using the same u
 
 \textbf{Consistently solved tasks (39 of 89).} These include cryptanalysis (FEAL differential), game-playing (chess best move), git operations (leak recovery), server configuration (gRPC key-value store, PyPI server, NGINX logging), data processing (resharding), formal verification (Coq~\texttt{plus\_comm}), ML inference (HuggingFace model serving, LLM batching scheduler), and system emulation (QEMU startup).  The breadth of this set demonstrates that the agent's generality is not limited to a single domain.
 
-\textbf{Consistently failed tasks (19 of 89).} The failures cluster into three categories: (1)~tasks requiring graphical or multimedia capabilities unavailable in the container, (2)~tasks demanding very long or resource-intensive builds that exceed time or memory limits, and (3)~tasks with niche domain-specific requirements that the model struggles to satisfy.
+\textbf{Consistently failed tasks (19 of 89).} The failures cluster into three categories: (1)~tasks requiring graphical or multimedia capabilities unavailable in the container (video processing, Windows~3.11 GUI installation, MTEB leaderboard scraping), (2)~tasks demanding very long or resource-intensive builds that exceed time or memory limits (CompCert compilation, Doom for MIPS, Caffe CIFAR-10, training fastText on Yelp data), and (3)~tasks with niche domain-specific requirements that the model struggles to satisfy (DNA insertion, OCaml GC patching, polyglot C/Python binaries, protein assembly, cell segmentation).
 
-\textbf{Mixed-result tasks (31 of 89).} Tasks such as \texttt{write-compressor} (3/5), \texttt{crack-7z-hash} (4/5), and \texttt{feal-linear-cryptanalysis} (4/5) succeed in most trials but occasionally fail due to non-determinism in the model's reasoning or timing-sensitive environment interactions.
+\textbf{Mixed-result tasks (31 of 89).} Tasks such as \texttt{write-compressor} (3/5), \texttt{crack-7z-hash} (4/5), and \texttt{feal-linear-cryptanalysis} (4/5) succeed in most trials but occasionally fail due to non-determinism in the model's reasoning or timing-sensitive environment interactions.  Conversely, \texttt{cancel-async-tasks} (1/5) and \texttt{dna-assembly} (1/5) succeed rarely, suggesting they are at the boundary of the model's capability.
 
 \textbf{Leaderboard context.}  KS Assistant does not score as high as some coding agents on the Terminal Bench~2.0 leaderboard.  However, we note that recent analysis has found widespread cheating on popular agent benchmarks, including Terminal Bench~2.0: the top three submissions commit harness-level cheating (e.g., leaking verifier code or answer keys into the agent's environment), and task-level cheating (e.g., Googling answers, mining git history, hardcoding test outputs) affects 28+ submissions across 9 benchmarks~\citep{stein2026cheatingblog,stein2026detecting}.  Separately, an automated benchmark audit found 45 confirmed hacking solutions across 13 widely used benchmarks exhibiting process-isolation failures, answer leakage, and weak test assertions that allow perfect scores without solving a single problem~\citep{wang2026trustworthyblog}.
 
@@ -339,6 +387,8 @@ We release our system as a VS~Code extension and a web app.  While the underlyin
 We have shown that a simple layered, single-concern architecture can address the practical challenges of deploying LLM agents for real-world software development.  On Terminal Bench~2.0, a benchmark of 89 diverse terminal-based tasks evaluated across 5 trials each, our system achieves a 62.2\% overall pass rate (277/445)---outperforming Claude~Code (58\%) and Cursor Composer~2 (61.7\%) on the same benchmark with the same underlying model (Claude Opus~4.6).  These results are achieved without benchmark-specific optimizations, fine-tuning, or reinforcement learning: the entire agent is roughly 1,900 lines of straightforward Python.
 
 We complement the architecture with a system prompt that encodes engineering discipline directly into the agent's behavior: read before writing, test before fixing, plan before executing, verify before finishing.  These are not novel insights---they are the practices of careful software engineering, translated into instructions that an LLM can follow.  The evaluation suggests that giving a frontier model the time and tools to validate its own output matters more than model-level customization.
+
+\paragraph{Limitations.}  Our evaluation uses a single frontier model (Claude Opus~4.6) and a single benchmark (Terminal Bench~2.0).  Evaluating across a broader set of models (including open-weight models) and benchmarks (including SWE-bench Pro and LiveCodeBench) is important future work.  The continuation protocol's structured summaries may lose fidelity for very long tasks spanning many sub-sessions; while we have not observed this in practice, a systematic study of summary degradation over many continuations remains open.  The quality-over-speed posture---giving the agent time to run linters, type checkers, and tests---means that task completion times are longer than those of agents that skip verification; this trade-off may not suit latency-sensitive workflows.  Finally, the no-mocks testing discipline, while producing high-confidence test suites, can be impractical for systems with expensive external dependencies (e.g., paid third-party APIs).
 
 In summary, we showed that a simple agent framework, without sophisticated agent technologies such as trajectory compaction and asynchronous multi-agent orchestration, is sufficient to build a competitive software engineering assistant.  By building the system using itself and matching or beating both the Cursor and Claude Code agents, we demonstrated that time-tested software engineering techniques and principles are invaluable for building reliable, practical agent systems.
 
