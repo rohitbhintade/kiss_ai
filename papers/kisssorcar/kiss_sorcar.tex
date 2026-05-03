@@ -94,7 +94,7 @@ To access the power and capabilities of the KISS agent framework, we implement K
 
 In the project, we deliberately prioritize output quality over latency.  In our experience, using a weaker or cheaper model often forces the developer to discard the agent's work and retry, ultimately increasing the total cost of completing a task.  Conversely, giving a frontier model adequate time to validate its own output---running linters, type checkers, and tests before declaring success---dramatically reduces the ``slop'' (low-quality, subtly incorrect code) that plagues faster but less thorough agents.  We expect token costs and inference latencies to continue to fall~\citep {gao2025trae}, making this quality-first posture increasingly practical.  In the meantime, the code produced by our agent is consistently well-organized, simple, and idiomatic.
 
-We built the system using itself.  The entire codebase---the KISS Agent framework, the Sorcar agent layers, the VS~Code extension, and the system prompt---was developed by KISS Sorcar operating on its own repository.  This self-hosting discipline provides a continuous-integration-style stress test: if the agent introduces a bug that impairs its ability to function, we immediately ask the agent to fix it by analyzing the trajectory and code of KISS Sorcar.  The simplicity of the layered architecture was both a prerequisite for and a consequence of this bootstrapping process. The five core agent classes are remarkably compact: the KISS Agent comprises 409~lines, the Relentless Agent 297~lines, the Sorcar Agent 323~lines, the Chat Sorcar Agent 120~lines, and the Worktree Sorcar Agent 692~lines---a total of roughly 1,850~lines of code (excluding empty lines and comments).
+We built the system using itself.  The entire codebase---the KISS Agent framework, the Sorcar agent layers, the VS~Code extension, and the system prompt---was developed by KISS Sorcar operating on its own repository.  This self-hosting discipline provides a continuous-integration-style stress test: if the agent introduces a bug that impairs its ability to function, we immediately ask the agent to fix it by analyzing the trajectory and code of KISS Sorcar.  The simplicity of the layered architecture was both a prerequisite for and a consequence of this bootstrapping process. The five core agent classes are remarkably compact: the KISS Agent comprises 413~lines, the Relentless Agent 313~lines, the Sorcar Agent 322~lines, the Chat Sorcar Agent 125~lines, and the Worktree Sorcar Agent 704~lines---a total of roughly 1,877~lines of code (excluding empty lines and comments).
 
 We evaluate on Terminal Bench~2.0 and achieve a 62.2\% overall pass rate using Claude Opus~4.6, comparing favorably to Claude~Code (58\%) and Cursor Composer~2 (61.7\%)~\citep{cursor2026composer2} on the same benchmark (Section~\ref{sec:evaluation}).
 
@@ -220,9 +220,13 @@ The Sorcar Agent adds the tools that make the system useful for software develop
 
 The Chat Sorcar Agent adds multi-turn conversation persistence.
 
-\textbf{Chat sessions.}  We assign each task to a chat session identified by a stable chat ID.  The agent persists tasks and their results to a local database.  When a new task arrives within the same chat session, the agent loads all prior tasks and results and prepends them to the prompt as numbered context entries, allowing the LLM to reference earlier work.
+\textbf{Chat sessions.}  We assign each task to a chat session identified by a stable chat ID.  The agent persists tasks and their results to a local database (\texttt{sorcar.db}).  When a new task arrives within the same chat session, the agent loads prior tasks and results and prepends them to the prompt as numbered context entries, allowing the LLM to reference earlier work.
+
+\textbf{Bounded chat context.}  To prevent unbounded growth of the prompt as a chat session accumulates many tasks, the agent caps the number of in-context history entries at \texttt{MAX\_TASKS=10}.  When the cap is exceeded, it preserves the first two entries (which typically establish the user's overall intent for the session) and the most recent entries, dropping the middle entries that are least likely to be referenced.  This keeps the context relevant and bounded while retaining both the session's framing and its current state.
 
 \textbf{Session management.}  The agent supports three operations: starting a new chat (with a fresh chat ID), resuming a chat by task description (which looks up the corresponding chat ID), and resuming by explicit chat ID.  This enables both automatic session continuity in an IDE and manual session selection from the command line.
+
+\textbf{Frequent task tracking.}  Each time a task is executed, the agent records the task description in a frequency table.  The IDE sidebar surfaces the most frequent tasks so users can re-issue them with one click, turning recurring requests (``run the test suite,'' ``regenerate the changelog'') into a click-to-replay experience.
 
 \textbf{Metadata persistence.}  After each task, the agent records metadata including the model used, working directory, software version, token count, cost, and whether the task used parallel execution or worktree isolation.  This audit trail supports cost analysis and debugging.
 
@@ -341,6 +345,7 @@ Tool usage rules are explicit and mechanical:
 \begin{prompt}
 # Rules
 
+- PWD denotes your current working directory.
 - Write() for new files. Edit() for small changes.
 - Run Bash commands synchronously using the
   `timeout_seconds` parameter. Use 300s (default) for
@@ -350,15 +355,14 @@ Tool usage rules are explicit and mechanical:
   and poll periodically.
 - Use go_to_url() for browser tool.
 - **The user cannot see intermediate chat. Show whatever
-  user asks in the summary of the finish tool call.**
+  user asks in the summary of the 'finish' tool call.**
 - READ large files in chunks.
-- Create temporary files in PWD/tmp
-- Use ULTRA thinking always
+- Create temporary files in PWD/tmp. Cleanup temporary
+  files after the task is done.
+- Use ULTRA thinking ALWAYS.
 - **If you are running out of context length or steps, DO
-  NOT try to complete the task urgently, but continue the
-  task by calling 'finish'**
-- PWD in the system prompt and user prompt denotes current
-  working directory.
+  NOT rush to complete the task urgently, but continue the
+  task by calling 'finish' with 'is_continue' set to true**
 \end{prompt}
 
 Each tool rule addresses a specific failure mode:
@@ -373,13 +377,13 @@ Each tool rule addresses a specific failure mode:
 
 \textbf{``READ large files in chunks.''}  Reading a 10,000-line file in a single tool call consumes a large fraction of the context window.  By instructing the model to read files in chunks, the prompt prevents context window exhaustion from a single file read, preserving capacity for the rest of the task.
 
-\textbf{``Create temporary files in PWD/tmp.''}  Without this instruction, the model creates temporary files in unpredictable locations (the system \texttt{/tmp}, the home directory, or scattered throughout the project).  Centralizing temporary files in a known directory makes cleanup predictable and prevents polluting the project tree with artifacts.
+\textbf{``Create temporary files in PWD/tmp.\ Cleanup temporary files after the task is done.''}  Without this instruction, the model creates temporary files in unpredictable locations (the system \texttt{/tmp}, the home directory, or scattered throughout the project).  Centralizing temporary files in a known directory makes cleanup predictable, and the explicit cleanup directive prevents the project tree from being polluted with stale artifacts after the task completes.
 
-\textbf{``Use ULTRA thinking always.''}  This instruction activates the model's extended reasoning mode (also known as ``thinking'' or ``chain-of-thought'' mode), in which the model performs additional internal deliberation before producing a response.  Extended reasoning is particularly valuable for complex, multi-step tasks in which the model must plan before acting.
+\textbf{``Use ULTRA thinking ALWAYS.''}  This instruction activates the model's extended reasoning mode (also known as ``thinking'' or ``chain-of-thought'' mode), in which the model performs additional internal deliberation before producing a response.  Extended reasoning is particularly valuable for complex, multi-step tasks in which the model must plan before acting.
 
-\textbf{``If you are running out of context length or steps, DO NOT try to complete the task urgently, but continue the task by calling finish.''}  When the context window is nearly full, LLMs exhibit a ``rush to finish'' behavior: they skip verification steps, make hasty edits, and call \texttt{finish} with an incomplete result.  This instruction redirects that urgency into the continuation protocol (Section~\ref{sec:relentless-agent}), ensuring that a clean handoff to a new sub-session produces better results than a frantic attempt to squeeze everything into the remaining tokens.
+\textbf{``If you are running out of context length or steps, DO NOT rush to complete the task urgently, but continue the task by calling 'finish' with 'is\_continue' set to true.''}  When the context window is nearly full, LLMs exhibit a ``rush to finish'' behavior: they skip verification steps, make hasty edits, and call \texttt{finish} with an incomplete result.  This instruction redirects that urgency into the continuation protocol (Section~\ref{sec:relentless-agent}), ensuring that a clean handoff to a new sub-session produces better results than a frantic attempt to squeeze everything into the remaining tokens.
 
-\textbf{``PWD in the system prompt and user prompt denotes current working directory.''}  The acronym ``PWD'' appears throughout the prompt and in user task descriptions (e.g., ``edit PWD/src/main.py'').  Without this definition, the model might interpret PWD as the Unix environment variable \texttt{\$PWD} and attempt to expand it, or misinterpret it as a literal directory name.  The explicit definition ensures consistent interpretation.
+\textbf{``PWD denotes your current working directory.''}  The acronym ``PWD'' appears throughout the prompt and in user task descriptions (e.g., ``edit PWD/src/main.py'').  Without this definition, the model might interpret PWD as the Unix environment variable \texttt{\$PWD} and attempt to expand it, or misinterpret it as a literal directory name.  The explicit definition ensures consistent interpretation.
 
 %......................................................................
 \subsection{Pre-flight Checks}
@@ -420,13 +424,16 @@ The prompt encodes a minimalist code philosophy:
 ## Code Style Guidelines
 
 - Write simple, clean, and readable code with minimal
-  indirection
+  indirection.
+- Organize the code in multiple files based on code's
+  functionality.
 - Avoid unnecessary object attributes, local variables, and
-  config variables
+  config variables.
 - Avoid tight coupling among files and modules.
-- Avoid object/struct attribute redirections
-- No redundant abstractions or duplicate code
-- Public methods MUST have full documentation
+- Avoid object/struct attribute redirections.
+- DO NOT USE CLOSURES.
+- No redundant abstractions or duplicate code.
+- Public methods MUST have full documentation.
 - Understand the root cause of an issue or bug, and patch
   the root cause instead of an ad hoc superficial fix.
 - Before you write code, wait and think if the code is
@@ -440,11 +447,15 @@ exhibited by LLM-generated code:
 
 \textbf{``Write simple, clean, and readable code with minimal indirection.''}  LLMs tend to over-engineer solutions, introducing unnecessary abstractions, helper classes, and levels of indirection. Simple code is easier to review, test, and maintain.
 
+\textbf{``Organize the code in multiple files based on code's functionality.''}  LLMs often pile new code onto whichever file is currently being edited, producing 2,000-line modules that conflate unrelated concerns.  This directive nudges the model toward a modular layout in which each file has a single, coherent responsibility, making the resulting code easier to navigate, test, and reuse.
+
 \textbf{``Avoid unnecessary object attributes, local variables, and config variables.''}  LLMs frequently introduce intermediate variables that serve no purpose---for example, assigning a return value to a local variable only to immediately return it on the next line, or storing a constant in a configuration file when it is used in exactly one place.  Each unnecessary variable adds a name the developer must track and a site where the value could be accidentally mutated.
 
 \textbf{``Avoid tight coupling among files and modules.''} When the model adds a feature that touches multiple files, it may introduce imports, shared global state, or cross-module function calls that create tight coupling.  This instruction encourages modular design where each module has a clear, narrow interface.
 
 \textbf{``Avoid object/struct attribute redirections.''}  An attribute redirection occurs when an object stores a reference to another object solely to forward method calls to it---for example, \texttt{self.x = other.x} at construction time, creating two paths to the same value.  LLMs commonly introduce such redirections when adapting code from one context to another.  They make it harder to reason about ownership and lifetime.
+
+\textbf{``DO NOT USE CLOSURES.''}  LLMs reach for closures whenever a small piece of state needs to be carried alongside a function---producing nested \texttt{def}s that capture mutable variables from the enclosing scope.  Such closures are difficult to test in isolation, opaque to type checkers, and a frequent source of subtle bugs caused by late binding of the captured variables.  The blanket prohibition steers the model toward explicit data structures (plain functions with arguments, classes with attributes), which are easier to reason about, easier to test, and play well with our no-mocks testing discipline.
 
 \textbf{``No redundant abstractions or duplicate code.''}  LLMs sometimes create a new utility function or class that duplicates functionality already present in the codebase, because they did not read the existing code thoroughly.  This instruction reminds the model to check for existing implementations before creating new ones, and to factor out duplication when it encounters it.
 
@@ -531,15 +542,15 @@ The testing section is perhaps the most opinionated:
 
 - Run lint and typecheckers and fix any lint and typecheck
   errors.
-- You MUST achieve 100% branch coverage
+- You MUST achieve 100% branch coverage.
 - Tests MUST NOT use mocks, patches, fakes, or any form of
-  test doubles
-- You MUST write integration tests
-- Each test should be independent and verify actual behavior
+  test doubles.
+- You MUST write integration tests or end-to-end tests.
+- Each test should be independent and verify actual behavior.
 - **Do NOT run all tests after modifications. Only run the
-  impacted tests**
+  impacted tests.**
 - To confirm a race condition, add sleep statements before
-  racing statements with delays less than 0.1s
+  racing statements with delays less than 0.1s.
 \end{prompt}
 
 \noindent Each testing instruction addresses a specific concern:
@@ -550,7 +561,7 @@ The testing section is perhaps the most opinionated:
 
 \textbf{``Tests MUST NOT use mocks, patches, fakes, or any form of test doubles.''}  This is the most opinionated rule.  Mock tests that verify code call certain methods in a certain order — these test the implementation, not the behavior.  A test suite built on mocks can pass with flying colors while the system is fundamentally broken,  because the mocks hide the real dependencies.  Integration tests that exercise actual behavior are more expensive to run but provide genuine confidence that the system works.  Moreover, writing integration tests forces the model to think more deeply, often enabling the agent to find deeper bugs in the code.
 
-\textbf{``You MUST write integration tests.''}  This reinforces the no-mocks rule by explicitly requiring integration tests rather than unit tests.  The distinction matters: a unit test in isolation may verify that a function produces the right output for a given input, but an integration test verifies that the function works correctly within the larger system---with real file I/O, real database connections, and real inter-module interactions.
+\textbf{``You MUST write integration tests or end-to-end tests.''}  This reinforces the no-mocks rule by explicitly requiring integration or end-to-end tests rather than unit tests.  The distinction matters: a unit test in isolation may verify that a function produces the right output for a given input, but an integration or end-to-end test verifies that the function works correctly within the larger system---with real file I/O, real database connections, and real inter-module interactions.
 
 \textbf{``Each test should be independent and verify actual behavior.''}  Test independence means that running tests in any order produces the same results.  Tests that depend on shared state or execution order are brittle and difficult to debug when they fail.  ``Verify actual behavior'' reiterates that tests should assert on observable outcomes (return values, side effects, system state) rather than implementation details.
 
@@ -571,7 +582,8 @@ The agent maintains a preferences file that captures user invariants discovered 
   of each task.
 - Then update PWD/USER_PREFS.md to capture the user
   preferences and invariants by analyzing the task. DO NOT
-  ADD ANY CODE SNIPPETS OR SYMBOLS.
+  ADD ANY CODE SNIPPETS OR SYMBOLS. Do not add anything for
+  tasks that won't be run again.
 - You MUST carefully and thoroughly get rid of the user
   preferences and invariants that conflict with the newly
   added ones.
@@ -584,7 +596,7 @@ cross-session learning:
 
 \textbf{``Then update PWD/USER\_PREFS.md to capture the user preferences and invariants by analyzing the task.''}  After completing a task, the agent may have learned new information about the user's preferences: a preferred naming convention, a disliked pattern, a project-specific invariant.  Writing these to the preferences file makes them available to future sessions.  This mechanism allows the agent to accumulate project knowledge over time without requiring the user to repeat themselves.
 
-\textbf{``DO NOT ADD ANY CODE SNIPPETS OR SYMBOLS.''}  Code snippets in the preferences file are fragile: they become stale as the codebase evolves, and they consume tokens that would be better spent on natural-language descriptions of invariants.  This instruction keeps the file compact and robust to code changes.
+\textbf{``DO NOT ADD ANY CODE SNIPPETS OR SYMBOLS.\ Do not add anything for tasks that won't be run again.''}  Code snippets in the preferences file are fragile: they become stale as the codebase evolves, and they consume tokens that would be better spent on natural-language descriptions of invariants.  The companion rule about one-off tasks prevents preference drift in the opposite direction: without it, the agent would record an entry every time it completed any task, gradually polluting the file with idiosyncratic details (a particular file path, a single throwaway experiment) that have no bearing on future work.  Together, the two clauses keep the file compact, robust to code changes, and focused on durable invariants.
 
 \textbf{``You MUST carefully and thoroughly get rid of the user preferences and invariants that conflict with the newly added ones.''}  Over time, preferences may become contradictory---for example, an early preference might say ``use camelCase for test methods'' while a later correction says ``use snake\_case.'' Without explicit conflict resolution, the file would accumulate contradictions, confusing the agent.  This instruction mandates that the agent actively resolve conflicts when updating the file to keep it internally consistent.  \emph{Note that we do not keep learnings in a database or in various folders because it makes the information stale when lots of code changes are happening.  It is impossible for an agent to eliminate stale information across databases and multiple folders.}
 
@@ -634,20 +646,21 @@ When the agent needs external knowledge, the prompt prescribes a structured rese
 ## Use web tools when you need to:
 
 - When you need to collect knowledge from the internet,
-  visit **AT LEAST 100 WEB SITES** and collect information
-  necessary for the task without much thinking in a new
-  file PWD/tmp/information-{unique_id}.md. Then go over
-  information in PWD/tmp/information-{unique_id}.md, think
-  deeply on how to complete the task at hand, and
-  complete it.
+  visit **AT LEAST 30 WEB SITES** (use a counter to keep
+  track of the number of websites you visited) and collect
+  information necessary for the task without much thinking
+  in a new file PWD/tmp/information-{unique_id}.md. Then
+  go over information in
+  PWD/tmp/information-{unique_id}.md, think deeply on how
+  to complete the task at hand, and complete it.
 - If you need to login to an website while browsing for
-  information, you MUST ask the user to help you with
-  login. You **MUST NOT** ask the user to login to Google.
+  information, you MUST ask the user to to help you with
+  login.
 \end{prompt}
 
-\noindent The rationale is a two-phase separation between \emph{collection} and \emph{synthesis}.  LLMs tend to anchor on the first few results they encounter, which biases their solutions toward a narrow slice of the design space.  By forcing the agent to accumulate a broad set of information into a file \emph{before} reasoning about it, the protocol counteracts anchoring bias and encourages the model to consider diverse approaches.  The ``at least 100 web sites threshold is deliberately aggressive: it ensures the agent does not shortcut the research phase after two or three hits, and the resulting information file serves as an auditable artifact of what the agent considered.
+\noindent The rationale is a two-phase separation between \emph{collection} and \emph{synthesis}.  LLMs tend to anchor on the first few results they encounter, which biases their solutions toward a narrow slice of the design space.  By forcing the agent to accumulate a broad set of information into a file \emph{before} reasoning about it, the protocol counteracts anchoring bias and encourages the model to consider diverse approaches.  The ``at least 30 web sites'' threshold is deliberately aggressive: it ensures the agent does not shortcut the research phase after two or three hits, and the resulting information file serves as an auditable artifact of what the agent considered.  The explicit ``use a counter'' instruction addresses an empirically observed failure mode in which the model claims to have ``visited many sites'' after only a handful of fetches; a concrete counter forces the model to verify the actual number visited before declaring the collection phase complete.
 
-The login instruction addresses a practical obstacle in web research: many websites require authentication before revealing their content. Rather than silently skipping gated pages or hallucinating their contents, we instruct the agent to ask the user for help with login. The Google exception acknowledges that the agent can search the web without a Google account, and asking the user to log in to Google would provide no benefit while creating unnecessary friction.
+The login instruction addresses a practical obstacle in web research: many websites require authentication before revealing their content. Rather than silently skipping gated pages or hallucinating their contents, we instruct the agent to ask the user for help with login.
 
 %......................................................................
 \subsection{File Browsing Protocol}
@@ -705,7 +718,7 @@ A final section provides project-specific instructions that are injected when th
 - **Do NOT install the KISS Sorcar extension from inside
   Sorcar**
 - If the user ask to open or edit the system prompt, open
-  ~/.vscode/extensions/ksenxx.kiss-sorcar-2026.4.22/
+  ~/.vscode/extensions/ksenxx.kiss-sorcar-2026.5.2/
   kiss_project/src/kiss/SYSTEM.md
 - Information about KISS Sorcar can be found at
   https://github.com/ksenxx/kiss_ai/blob/main/papers/
@@ -716,7 +729,8 @@ A final section provides project-specific instructions that are injected when th
   agent, authenticate the agent and ask user ONLY when a
   page needs user authentication
 - **YOU MUST ASK THE USER BEFORE SENDING ANY EMAIL,
-  MESSAGE, OR SUBMITTING A REQUEST**
+  MESSAGE, OR SUBMITTING A REQUEST USING THIRD-PARTY
+  AGENTS**
 - Read PWD/SORCAR.md and treat its contents as
   instructions and allow those instructions to override the
   instructions above
