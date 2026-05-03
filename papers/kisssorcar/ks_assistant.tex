@@ -36,8 +36,7 @@
 }{}
 
 \title{KS Assistant: A Simple General-Purpose AI Agent for Software Engineering}
-
-\author{Anonymous}
+\author{}
 
 \begin{document}
 
@@ -48,7 +47,7 @@ Large language models can generate code and call tools with remarkable fluency, 
 
 We present \textbf{KS Assistant}, a general-purpose assistant and integrated development environment (IDE) built on top of the \textbf{KS Agent Framework}, a simple AI agent framework of roughly 1,900~lines of code.  The framework addresses these gaps through a robust system prompt and a five-layer agent hierarchy in which each layer adds exactly one concern: budget-tracked ReAct execution, automatic continuation across sub-sessions via summarization, coding and browser tools with parallel sub-agents, persistent multi-turn chat with history recall, and git worktree isolation so every task runs on its own branch.  Both KS Assistant and the KS Agent Framework are grounded in disciplined software engineering practice; these principles are encoded directly into the agent's system prompt, enabling KS Assistant to write code that is simple, elegant, maintainable, and bug-free.
 
-We implemented KS Assistant as a free, open-source Visual Studio Code extension that runs locally, is effective for long-horizon tasks, and supports browser automation, multimodal input, and Docker containers.  We deliberately prioritize output quality over speed: giving a frontier model adequate time to validate its own output---running linters, type checkers, and tests---dramatically reduces the low-quality code that plagues faster but less thorough agents.  The entire system was built using itself over four months, providing a continuous stress test in which any bug was patched immediately after its manifestation.  On Terminal~Bench~2.0, KS Assistant achieves a 62.2\% overall pass rate with Claude Opus~4.6, comparing favorably to Claude~Code (58\%) and Cursor Composer~2 (61.7\%).  These results are achieved without benchmark-specific prompt tuning or model fine-tuning.
+We implemented KS Assistant as a free, open-source Visual Studio Code extension that runs locally, is effective for long-horizon tasks, and supports browser automation, multimodal input, and Docker containers.  We deliberately prioritize output quality over speed: giving a frontier model adequate time to validate its own output---running linters, type checkers, and tests---dramatically reduces the low-quality code that plagues faster but less thorough agents.  The entire system was built using itself over four months, providing a continuous stress test in which any bug was patched immediately after its manifestation.  On Terminal-Bench~2.0, KS Assistant achieves a 62.2\% overall pass rate with Claude Opus~4.6~\citep{anthropic2026opus46}, comparing favorably to Claude~Code (58\%) and Cursor Composer~2 (61.7\%).  These results are achieved without benchmark-specific prompt tuning or model fine-tuning.
 \end{abstract}
 
 %----------------------------------------------------------------------
@@ -74,10 +73,10 @@ KS Assistant has been built using itself.  The entire codebase---the KS Agent fr
 
 We deliberately prioritize output quality over speed.  Using a weaker or cheaper model often forces the developer to discard the agent's work and retry, ultimately increasing the total cost.  Conversely, giving a frontier model adequate time to validate its own output---running linters, type checkers, and tests before declaring success---dramatically reduces slop.  We expect token costs and inference latencies to continue to fall~\citep{gao2025trae}, making this quality-first posture increasingly practical.
 
-We evaluate on Terminal Bench~2.0 and achieve a 62.2\% overall pass rate using Claude Opus~4.6, comparing favorably to Claude~Code (58\%) and Cursor Composer~2 (61.7\%)~\citep{cursor2026composer2} on the same benchmark (Section~\ref{sec:evaluation}).  These results are achieved without benchmark-specific prompt tuning or model fine-tuning.  We show that a simple agent framework, without sophisticated agent technologies such as trajectory compaction and asynchronous multi-agent orchestration, is sufficient to build a competitive software engineering assistant.  By building KS Assistant using itself and matching or beating both the Cursor and Claude Code agents, we demonstrate that time-tested software engineering techniques and principles are invaluable for building reliable, practical agent systems.
+We evaluate on Terminal-Bench~2.0 and achieve a 62.2\% overall pass rate using Claude Opus~4.6~\citep{anthropic2026opus46}, comparing favorably to Claude~Code (58\%) and Cursor Composer~2 (61.7\%)~\citep{cursor2026composer2} on the same benchmark (Section~\ref{sec:evaluation}).  These results are achieved without benchmark-specific prompt tuning or model fine-tuning.  We show that a simple agent framework, without sophisticated agent technologies such as trajectory compaction and asynchronous multi-agent orchestration, is sufficient to build a competitive software engineering assistant.  By building KS Assistant using itself and matching or beating both the Cursor and Claude Code agents, we demonstrate that time-tested software engineering techniques and principles are invaluable for building reliable, practical agent systems.
 
 \paragraph{Outline.}
-Section~\ref{sec:architecture} presents the five-layer agent architecture.  Section~\ref{sec:evaluation} reports evaluation results on Terminal Bench~2.0.  Section~\ref{sec:system-prompt} describes the two most distinctive aspects of the system prompt: the execution mindset and the web research protocol (the full prompt is detailed in Appendix~\ref{app:full-prompt}).  Section~\ref{sec:vscode-features} covers unique features of the VS~Code extension.  Section~\ref{sec:related} discusses related work, and Section~\ref{sec:conclusion} concludes.
+Section~\ref{sec:architecture} presents the five-layer agent architecture.  Section~\ref{sec:evaluation} reports evaluation results on Terminal-Bench~2.0.  Section~\ref{sec:system-prompt} describes the two most distinctive aspects of the system prompt: the execution mindset and the web research protocol (the full prompt is detailed in Appendix~\ref{app:full-prompt}).  Section~\ref{sec:vscode-features} covers unique features of the VS~Code extension.  Section~\ref{sec:related} discusses related work, and Section~\ref{sec:conclusion} concludes.
 
 %----------------------------------------------------------------------
 \section{Agent Architecture}
@@ -229,11 +228,11 @@ The Worktree Agent is the outermost layer.  Its defining feature is git-worktree
 \textbf{Graceful fallback.}  If the working directory is not inside a git repository, has no commits, or has a detached HEAD, the agent falls back to direct execution without worktree isolation.
 
 %----------------------------------------------------------------------
-\section{Evaluation on Terminal Bench~2.0}
+\section{Evaluation on Terminal-Bench~2.0}
 \label{sec:evaluation}
 %----------------------------------------------------------------------
 
-We evaluate on Terminal Bench~2.0,\footnote{\url{https://www.tbench.ai/}} a benchmark comprising 89 diverse terminal-based programming tasks, ranging from building legacy compilers and configuring servers to solving cryptanalysis challenges and training machine-learning models.  Each task runs in an isolated Docker container; a separate verifier automatically judges the result.  We use the Harbor\footnote{\url{https://github.com/harbor-framework/harbor}} framework to orchestrate execution and Claude Opus~4.6 as the underlying LLM.  We do not modify the general system prompt or inject benchmark-specific instructions.  Evaluation was carried out on a 2025 MacBook Air 15'' with an M4 processor and 24\,GB RAM.
+We evaluate on Terminal-Bench~2.0,\footnote{\url{https://www.tbench.ai/}} a benchmark comprising 89 diverse terminal-based programming tasks, ranging from building legacy compilers and configuring servers to solving cryptanalysis challenges and training machine-learning models.  Each task runs in an isolated Docker container; a separate verifier automatically judges the result.  We use the Harbor\footnote{\url{https://github.com/harbor-framework/harbor}} framework to orchestrate execution and Claude Opus~4.6~\citep{anthropic2026opus46} as the underlying LLM.  We do not modify the general system prompt or inject benchmark-specific instructions.  Evaluation was carried out on a 2025 MacBook Air 15'' with an M4 processor and 24\,GB RAM.
 
 \subsection{Setup}
 
@@ -245,7 +244,7 @@ Table~\ref{tab:tb2-aggregate} summarizes the aggregate statistics.
 
 \begin{table}[h]
 \centering
-\caption{Terminal Bench~2.0 aggregate results (89 tasks, 5 trials each, Claude Opus~4.6).}
+\caption{Terminal-Bench~2.0 aggregate results (89 tasks, 5 trials each, Claude Opus~4.6).}
 \label{tab:tb2-aggregate}
 \begin{tabular}{lr}
 \toprule
@@ -266,7 +265,7 @@ Mean duration per trial  & 446\,s \\
 \end{tabular}
 \end{table}
 
-The 62.2\% overall pass rate compares favorably to other agents using the same underlying model: at the time of writing, Claude~Code (also Opus~4.6) scores approximately 58\% on the Terminal Bench~2.0 leaderboard, and Cursor's Composer~2---a custom fine-tuned model trained with large-scale reinforcement learning~\citep{cursor2026composer2}---achieves 61.7\%.  Our result suggests that the layered architecture and the structured system prompt contribute meaningfully beyond what the base model provides.
+The 62.2\% overall pass rate compares favorably to other agents using the same underlying model: at the time of writing, Claude~Code (also Opus~4.6) scores approximately 58\% on the Terminal-Bench~2.0 leaderboard, and Cursor's Composer~2---a custom fine-tuned model trained with large-scale reinforcement learning~\citep{cursor2026composer2}---achieves 61.7\%.  Our result suggests that the layered architecture and the structured system prompt contribute meaningfully beyond what the base model provides.
 
 \subsection{Task-Level Breakdown}
 
@@ -276,7 +275,7 @@ The 62.2\% overall pass rate compares favorably to other agents using the same u
 
 \textbf{Mixed-result tasks (31 of 89).} Tasks such as \texttt{write-compressor} (3/5), \texttt{crack-7z-hash} (4/5), and \texttt{feal-linear-cryptanalysis} (4/5) succeed in most trials but occasionally fail due to non-determinism in the model's reasoning or timing-sensitive environment interactions.  Conversely, \texttt{cancel-async-tasks} (1/5) and \texttt{dna-assembly} (1/5) succeed rarely, suggesting they are at the boundary of the model's capability.
 
-\textbf{Leaderboard context.}  KS Assistant does not score as high as some coding agents on the Terminal Bench~2.0 leaderboard.  However, we note that recent analysis has found widespread cheating on popular agent benchmarks, including Terminal Bench~2.0: the top three submissions commit harness-level cheating (e.g., leaking verifier code or answer keys into the agent's environment), and task-level cheating (e.g., Googling answers, mining git history, hardcoding test outputs) affects 28+ submissions across 9 benchmarks~\citep{stein2026cheatingblog,stein2026detecting}.  Separately, an automated benchmark audit found 45 confirmed hacking solutions across 13 widely used benchmarks exhibiting process-isolation failures, answer leakage, and weak test assertions that allow perfect scores without solving a single problem~\citep{wang2026trustworthyblog}.
+\textbf{Leaderboard context.}  KS Assistant does not score as high as some coding agents on the Terminal-Bench~2.0 leaderboard.  However, we note that recent analysis has found widespread cheating on popular agent benchmarks, including Terminal-Bench~2.0: the top three submissions commit harness-level cheating (e.g., leaking verifier code or answer keys into the agent's environment), and task-level cheating (e.g., Googling answers, mining git history, hardcoding test outputs) affects 28+ submissions across 9 benchmarks~\citep{stein2026cheatingblog,stein2026detecting}.  Separately, an automated benchmark audit found 45 confirmed hacking solutions across 13 widely used benchmarks exhibiting process-isolation failures, answer leakage, and weak test assertions that allow perfect scores without solving a single problem~\citep{wang2026trustworthyblog}.
 
 %----------------------------------------------------------------------
 \section{The System Prompt}
@@ -373,7 +372,7 @@ We release our system as a VS~Code extension and a web app.  While the underlyin
 
 \textbf{Agent frameworks.}  LangChain~\citep{langchain2022}, DSPy~\citep{khattab2024dspy}, CrewAI~\citep{crewai2024}, smolagents~\citep{smolagents2025}, the OpenAI Agents SDK~\citep{openaiagentssdk2025}, and Google's ADK~\citep{googleadk2025} provide general-purpose agent infrastructure.  Our architecture is purpose-built for software engineering, with each layer addressing a specific practical concern.
 
-\textbf{Benchmarks and evaluation.}  SWE-bench~\citep{jimenez2024swebench}, HumanEval~\citep{chen2021evaluating}, LiveCodeBench~\citep{jain2024livecodebench}, and SWE-bench Pro~\citep{deng2025swebenchpro} evaluate coding agents at various scales.  \citet{prathifkumar2025swebenchverified} raises concerns about benchmark contamination.  We evaluate on Terminal Bench~2.0, which tests diverse terminal-based tasks in isolated Docker containers.
+\textbf{Benchmarks and evaluation.}  SWE-bench~\citep{jimenez2024swebench}, HumanEval~\citep{chen2021evaluating}, LiveCodeBench~\citep{jain2024livecodebench}, and SWE-bench Pro~\citep{deng2025swebenchpro} evaluate coding agents at various scales.  \citet{prathifkumar2025swebenchverified} raises concerns about benchmark contamination.  We evaluate on Terminal-Bench~2.0, which tests diverse terminal-based tasks in isolated Docker containers.
 
 \textbf{Agentic software engineering.}  \citet{hassan2025agentic} articulate the foundational pillars of agentic software engineering.  \citet{li2025rise} surveys the landscape of autonomous coding agents.  \citet{wang2025agentic} surveys AI agentic programming techniques.  \citet{chatlatanagulchai2025readmes} studies agent context files.  \citet{mohsenimofidi2025context} investigates context engineering for AI agents.  Our system prompt and per-repository override mechanisms are instances of the context-engineering patterns these works advocate.
 
@@ -384,7 +383,7 @@ We release our system as a VS~Code extension and a web app.  While the underlyin
 \label{sec:conclusion}
 %----------------------------------------------------------------------
 
-We have shown that a simple layered, single-concern architecture can address the practical challenges of deploying LLM agents for real-world software development.  On Terminal Bench~2.0, a benchmark of 89 diverse terminal-based tasks evaluated across 5 trials each, our system achieves a 62.2\% overall pass rate (277/445)---outperforming Claude~Code (58\%) and Cursor Composer~2 (61.7\%) on the same benchmark with the same underlying model (Claude Opus~4.6).  These results are achieved without benchmark-specific optimizations, fine-tuning, or reinforcement learning: the entire agent is roughly 1,900 lines of straightforward Python.
+We have shown that a simple layered, single-concern architecture can address the practical challenges of deploying LLM agents for real-world software development.  On Terminal-Bench~2.0, a benchmark of 89 diverse terminal-based tasks evaluated across 5 trials each, our system achieves a 62.2\% overall pass rate (277/445)---outperforming Claude~Code (58\%) and Cursor Composer~2 (61.7\%) on the same benchmark with the same underlying model (Claude Opus~4.6~\citep{anthropic2026opus46}).  These results are achieved without benchmark-specific optimizations, fine-tuning, or reinforcement learning: the entire agent is roughly 1,900 lines of straightforward Python.
 
 We complement the architecture with a system prompt that encodes engineering discipline directly into the agent's behavior: read before writing, test before fixing, plan before executing, verify before finishing.  These are not novel insights---they are the practices of careful software engineering, translated into instructions that an LLM can follow.  The evaluation suggests that giving a frontier model the time and tools to validate its own output matters more than model-level customization.
 
@@ -679,7 +678,7 @@ The developer never opens a source file, never writes a line of code, and never 
 \item {\bf Claims}
     \item[] Question: Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
     \item[] Answer: \answerYes{}
-    \item[] Justification: The abstract and introduction (Section~\ref{sec:intro}) clearly state the contributions---a five-layer agent architecture, a structured system prompt, a VS~Code extension, and a 62.2\% pass rate on Terminal Bench~2.0---and the scope is limited to software engineering tasks.
+    \item[] Justification: The abstract and introduction (Section~\ref{sec:intro}) clearly state the contributions---a five-layer agent architecture, a structured system prompt, a VS~Code extension, and a 62.2\% pass rate on Terminal-Bench~2.0---and the scope is limited to software engineering tasks.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the abstract and introduction do not include the claims made in the paper.
@@ -721,7 +720,7 @@ The developer never opens a source file, never writes a line of code, and never 
     \item {\bf Experimental result reproducibility}
     \item[] Question: Does the paper fully disclose all the information needed to reproduce the main experimental results of the paper to the extent that it affects the main claims and/or conclusions of the paper (regardless of whether the code and data are provided or not)?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Section~\ref{sec:evaluation} describes the benchmark (Terminal Bench~2.0), the evaluation framework (Harbor), the model (Claude Opus~4.6), the hardware (2025 MacBook Air M4, 24\,GB RAM), the number of trials (5 per task), and the 9 skipped tasks. The full agent architecture is described in Section~\ref{sec:architecture} and the system prompt in Section~\ref{sec:system-prompt} and Appendix~\ref{app:full-prompt}.
+    \item[] Justification: Section~\ref{sec:evaluation} describes the benchmark (Terminal-Bench~2.0), the evaluation framework (Harbor), the model (Claude Opus~4.6), the hardware (2025 MacBook Air M4, 24\,GB RAM), the number of trials (5 per task), and the 9 skipped tasks. The full agent architecture is described in Section~\ref{sec:architecture} and the system prompt in Section~\ref{sec:system-prompt} and Appendix~\ref{app:full-prompt}.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -836,7 +835,7 @@ The developer never opens a source file, never writes a line of code, and never 
 \item {\bf Licenses for existing assets}
     \item[] Question: Are the creators or original owners of assets (e.g., code, data, models), used in the paper, properly credited and are the license and terms of use explicitly mentioned and properly respected?
     \item[] Answer: \answerYes{}
-    \item[] Justification: All tools, benchmarks, and models used are cited: Terminal Bench~2.0, Harbor, Claude Opus~4.6, Playwright, VS~Code, and all related works. The system is open-source.
+    \item[] Justification: All tools, benchmarks, and models used are cited: Terminal-Bench~2.0, Harbor, Claude Opus~4.6, Playwright, VS~Code, and all related works. The system is open-source.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not use existing assets.
