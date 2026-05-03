@@ -622,4 +622,92 @@ A central claim of our system is that natural-language interaction can replace m
 
 The developer never opens a source file, never writes a line of code, and never runs a test manually.  This style of development becomes possible because of the agent hierarchy: the Worktree Agent isolates changes on a branch, the Chat Agent preserves context across tasks, and the Relentless Agent continues when the context window is exhausted.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{NeurIPS Paper Checklist}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{enumerate}
+
+\item {\bf Claims}
+\item[] Question: Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
+\item[] Answer: \answerYes{}
+\item[] Justification: The abstract and introduction (Section~\ref{sec:intro}) clearly state the contributions---a five-layer agent architecture, a structured system prompt, a VS~Code extension, and a 62.2\% pass rate on Terminal Bench~2.0---and the scope is limited to software engineering tasks.
+
+\item {\bf Limitations}
+\item[] Question: Does the paper discuss the limitations of the work performed by the authors?
+\item[] Answer: \answerYes{}
+\item[] Justification: Section~\ref{sec:evaluation} discusses consistently failed tasks and their failure categories (graphical/multimedia requirements, resource-intensive builds, niche domain knowledge). The conclusion acknowledges that results depend on a single frontier model (Claude Opus~4.6) and a single benchmark.
+
+\item {\bf Theory, Assumptions and Proofs}
+\item[] Question: For each theoretical result, does the paper provide the full set of assumptions and a complete proof?
+\item[] Answer: \answerNA{}
+\item[] Justification: The paper does not include theoretical results. It is a systems paper presenting an architecture and empirical evaluation.
+
+\item {\bf Experimental Result Reproducibility}
+\item[] Question: Does the paper provide sufficient information for reproducing the main experimental results?
+\item[] Answer: \answerYes{}
+\item[] Justification: Section~\ref{sec:evaluation} describes the benchmark (Terminal Bench~2.0), the evaluation framework (Harbor), the model (Claude Opus~4.6), the hardware (2025 MacBook Air M4, 24\,GB RAM), the number of trials (5 per task), and the 9 skipped tasks. The full agent architecture is described in Section~\ref{sec:architecture} and the system prompt in Section~\ref{sec:system-prompt} and Appendix~\ref{app:full-prompt}.
+
+\item {\bf Open Access to Data and Code}
+\item[] Question: Does the paper provide open access to the data and code needed to reproduce the main experimental results?
+\item[] Answer: \answerNo{The code repository link is withheld to preserve double-blind review. The system is open-source and the code will be made available upon acceptance.}
+\item[] Justification: The open-source repository link is withheld to respect double-blind review (stated in Section~\ref{sec:intro}). The system will be publicly released upon acceptance.
+
+\item {\bf Experimental Setting/Details}
+\item[] Question: Does the paper specify all the training and experimental details necessary to understand the results?
+\item[] Answer: \answerYes{}
+\item[] Justification: Section~\ref{sec:evaluation} specifies the benchmark, model, hardware, number of trials, skipped tasks, and evaluation methodology. No training or fine-tuning is performed.
+
+\item {\bf Experiment Statistical Significance}
+\item[] Question: Does the paper report error bars suitably and correctly defined or other appropriate information about the statistical significance of the experiments?
+\item[] Answer: \answerYes{}
+\item[] Justification: We run 5 independent trials per task (445 total runs) and report pass@any (78.7\%), pass@all (43.8\%), and overall pass rate (62.2\%), as well as the distribution of always-pass, always-fail, and mixed-result tasks. Median and mean cost and duration are reported.
+
+\item {\bf Experiments Compute Resource}
+\item[] Question: For each experiment, does the paper provide sufficient information on the computer resources needed to reproduce the experiments?
+\item[] Answer: \answerYes{}
+\item[] Justification: Section~\ref{sec:evaluation} specifies the hardware (2025 MacBook Air 15'' with M4 processor and 24\,GB RAM) and reports median/mean cost (\$0.45/\$0.90 per trial) and median/mean duration (202\,s/446\,s per trial).
+
+\item {\bf Code Of Ethics}
+\item[] Question: Does the research conform to the NeurIPS Code of Ethics?
+\item[] Answer: \answerYes{}
+\item[] Justification: We have reviewed the NeurIPS Code of Ethics. The research involves building and evaluating a software engineering assistant; no human subjects, sensitive data, or dual-use concerns are involved.
+
+\item {\bf Broader Impacts}
+\item[] Question: Does the paper discuss both potential positive and negative societal impacts of the work?
+\item[] Answer: \answerYes{}
+\item[] Justification: The paper discusses positive impacts (making software development more accessible, reducing developer toil). Potential negative impacts include job displacement for routine programming tasks and the risk of generating vulnerable code if the system prompt's verification disciplines are removed. The system mitigates the latter through mandatory pre-finish verification (Appendix~\ref{app:prefinish}) and test-first discipline (Appendix~\ref{app:testing}).
+
+\item {\bf Safeguards}
+\item[] Question: Does the paper describe safeguards for responsible release of data or models with a high risk for misuse?
+\item[] Answer: \answerNA{}
+\item[] Justification: The paper does not release a pretrained language model or dataset. The system is an agent framework that wraps existing commercial LLM APIs.
+
+\item {\bf Licenses}
+\item[] Question: Are the creators of assets used in this work properly cited, and are the license terms respected?
+\item[] Answer: \answerYes{}
+\item[] Justification: All tools, benchmarks, and models used are cited: Terminal Bench~2.0, Harbor, Claude Opus~4.6, Playwright, VS~Code, and all related works. The system is open-source.
+
+\item {\bf New Assets}
+\item[] Question: Are new assets released alongside this paper documented with details about training, license, and limitations?
+\item[] Answer: \answerNA{}
+\item[] Justification: No new datasets or pretrained models are released. The open-source code will be documented upon release.
+
+\item {\bf Crowdsourcing and Research with Human Subjects}
+\item[] Question: For crowdsourcing experiments and research with human subjects, does the paper include the full text of instructions given to participants and details about compensation?
+\item[] Answer: \answerNA{}
+\item[] Justification: The paper does not involve crowdsourcing or research with human subjects.
+
+\item {\bf Institutional Review Board (IRB) Approvals or Equivalent for Research with Human Subjects}
+\item[] Question: Does the paper describe potential participant risks, with appropriate IRB approvals?
+\item[] Answer: \answerNA{}
+\item[] Justification: The paper does not involve human subjects research.
+
+\item {\bf Declaration of LLM usage}
+\item[] Question: Does the paper describe the usage of LLMs if it is an important, original, or non-standard component of the core methods?
+\item[] Answer: \answerYes{}
+\item[] Justification: The entire system is built around LLM usage. Section~\ref{sec:architecture} describes how LLMs are used as the core reasoning engine via native function calling (Section~\ref{sec:ks-agent}). The paper also discloses that the system was built using itself (Section~\ref{sec:intro}).
+
+\end{enumerate}
+
 \end{document}
