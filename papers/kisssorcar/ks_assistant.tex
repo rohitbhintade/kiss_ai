@@ -323,26 +323,23 @@ The prompt opens with two directives that set the tone for the entire session:
 When the agent needs external knowledge, the prompt prescribes a structured research workflow rather than allowing ad-hoc browsing:
 
 \begin{prompt}
-## Use web tools when you need to:
+## Web Research (MANDATORY)
 
-- When you need to collect knowledge from the internet,
-  visit **AT LEAST 30 WEBSITES** (use a counter to keep
-  track of the number of websites you visited) and collect
-  information necessary for the task without much thinking
-  in a new file PWD/tmp/information-{unique_id}.md. Then go
-  over the information in
-  PWD/tmp/information-{unique_id}.md and think deeply about
-  how to complete the task at hand.
-- If you need to log in to a website while browsing for
-  information, you MUST ask the user to help you with the
-  login.
+- **Visit >=30 websites every search. Hard requirement---don't stop before 30 or rationalize fewer.**
+- Procedure:
+  1. Create PWD/tmp/information-{unique_id}.md: `# Web Research --- Websites visited: 0/30`
+  1. Per site, append: `## [N/30] URL` + extracted info. Update header counter each visit.
+  1. **Don't proceed until counter >=30.**
+  1. If results dry up, try different queries, synonyms, official docs, GitHub repos/issues, Stack Overflow, blogs, Reddit, papers, API refs.
+  1. After 30, review and think deeply.
+- Ask user for login help when needed.
 \end{prompt}
 
 \noindent The rationale is a two-phase separation between \emph{collection} and \emph{synthesis}.  LLMs tend to anchor on the first few results they encounter, biasing their solutions toward a narrow slice of the design space.  By forcing the agent to accumulate a broad set of information into a file \emph{before} reasoning about it, the protocol counteracts anchoring bias and encourages the model to consider diverse approaches.
 
-The ``at least 30 websites'' threshold is deliberately aggressive: it ensures the agent does not shortcut the research phase after two or three hits, and the resulting information file serves as an auditable artifact of what the agent considered.  The explicit ``use a counter'' instruction addresses an empirically observed failure mode in which the model claims to have ``visited many sites'' after only a handful of fetches; a concrete counter forces the model to verify the actual number visited before declaring the collection phase complete.
+The ``visit $\geq$30 websites'' threshold is deliberately aggressive: it ensures the agent does not shortcut the research phase after two or three hits, and the resulting information file serves as an auditable artifact of what the agent considered.  The structured procedure with a counter header and per-site entries addresses an empirically observed failure mode in which the model claims to have ``visited many sites'' after only a handful of fetches; a concrete counter forces the model to verify the actual number visited before declaring the collection phase complete.  The instruction to try ``different queries, synonyms, official docs'' when results dry up prevents the agent from giving up prematurely on a narrow set of search terms.
 
-This two-phase collect-then-synthesize discipline is also applied to local file browsing (Appendix~\ref{app:file-browsing}): the agent writes a structured summary of each file's relevant information into a temporary markdown file, externalizing its understanding into a compact artifact that persists across context boundaries.  The instruction to collect ``without much thinking'' is deliberate: during the collection phase, the agent extracts and records facts rather than analyzes.  Analysis happens in the second phase, when the agent reads its own summary and reasons about the collected information as a whole.
+This two-phase collect-then-synthesize discipline is also applied to local file browsing (Appendix~\ref{app:file-browsing}): the agent writes a structured summary of each file's relevant information into a temporary markdown file, externalizing its understanding into a compact artifact that persists across context boundaries.  The instruction to collect ``without overthinking'' is deliberate: during the collection phase, the agent extracts and records facts rather than analyzes.  Analysis happens in the second phase, when the agent reads its own summary and reasons about the collected information as a whole.
 
 %----------------------------------------------------------------------
 \section{VS Code Extension: Unique Features}
@@ -417,43 +414,30 @@ Tool usage rules are explicit and mechanical:
 \begin{prompt}
 # Rules
 
-- PWD denotes your current working directory.
-- Write() for new files. Edit() for small changes.
-- Run Bash commands synchronously using the
-  `timeout_seconds` parameter. Use 300s (default) for
-  commands. If a command times out, retry with a higher
-  timeout. Only for commands expected to take more than
-  10 minutes, run them in the background, redirect output
-  to a file, and poll periodically.
-- Use go_to_url() for browser tool.
-- **The user cannot see intermediate chat. Show whatever
-  the user asks in the summary of the 'finish' tool
-  call.**
-- READ large files in chunks.
-- Create temporary files in PWD/tmp. Cleanup temporary
-  files after the task is done.
+- PWD = current working directory. Write() for new files; Edit() for small changes.
+- Run Bash synchronously with `timeout_seconds` (default 300s). Retry with higher timeout on timeout. For >10 min commands, run in background, redirect output to file, poll periodically.
+- Use go_to_url() for browser. Search the internet extensively.
+- **User only sees the finish() summary. Include full details/results/outputs. Never include meta-descriptions like "Answered the user's question about X" or "Fixed the bug in Y".**
+- Read large files in chunks. Temp files in PWD/tmp; clean up after.
 - Use ULTRA thinking ALWAYS.
-- **If you are running out of context length or steps,
-  DO NOT rush to complete the task urgently, but continue
-  the task by calling 'finish' with 'is_continue' set
-  to true**
+- **If running out of context/steps, don't rush---call finish(is_continue=true).**
 \end{prompt}
 
 Each rule addresses a specific failure mode:
 
-\textbf{``Write() for new files.\ Edit() for small changes.''}  Without this distinction, the model may use \texttt{Write()} to overwrite an existing file with a slightly modified version, losing content it forgot to include.
+\textbf{``Write() for new files; Edit() for small changes.''}  Without this distinction, the model may use \texttt{Write()} to overwrite an existing file with a slightly modified version, losing content it forgot to include.
 
 \textbf{Bash timeout guidance.}  LLMs frequently launch shell commands without considering their runtime.  The instruction to use 300~seconds as the default, retry with higher timeouts, and run long-running commands in the background provides a mechanical protocol that handles common cases.
 
-\textbf{``The user cannot see intermediate chat.''}  This forces the model to put all user-facing information into the \texttt{finish} summary, preventing situations where the model ``tells'' the user something in an intermediate message and then assumes it was seen.
+\textbf{``Use go\_to\_url() for browser.\ Search the internet extensively.''}  The first clause specifies which tool to use for browser-based interactions.  The second encourages the agent to proactively search the web when it encounters unfamiliar APIs or error messages, rather than relying on parametric memory.
 
-\textbf{``READ large files in chunks.''}  Reading a 10,000-line file in a single tool call consumes a large fraction of the context window.  Chunked reading preserves capacity for the rest of the task.
+\textbf{``User only sees the finish() summary.''}  This forces the model to put all user-facing information into the \texttt{finish} summary, preventing situations where the model ``tells'' the user something in an intermediate message and then assumes it was seen.  The companion clause about meta-descriptions prevents vague summaries, requiring concrete details and outputs.
 
-\textbf{``Create temporary files in PWD/tmp.''}  Centralizing temporary files in a known directory makes cleanup predictable and prevents project-tree pollution.
+\textbf{``Read large files in chunks.\ Temp files in PWD/tmp; clean up after.''}  Reading a 10,000-line file in a single tool call consumes a large fraction of the context window.  Chunked reading preserves capacity for the rest of the task.  Centralizing temporary files in a known directory makes cleanup predictable and prevents project-tree pollution.
 
 \textbf{``Use ULTRA thinking ALWAYS.''}  This activates the model's extended reasoning mode, which is particularly valuable for complex, multi-step tasks.
 
-\textbf{``If you are running out of context length or steps{\ldots}''}  When the context window is nearly full, LLMs exhibit a ``rush to finish'' behavior, skipping verification steps.  This instruction redirects that urgency into the continuation protocol (Section~\ref{sec:relentless-agent}).
+\textbf{``If running out of context/steps, don't rush---call finish(is\_continue=true).''}  When the context window is nearly full, LLMs exhibit a ``rush to finish'' behavior, skipping verification steps.  This instruction redirects that urgency into the continuation protocol (Section~\ref{sec:relentless-agent}).
 
 %......................................................................
 \subsection{Pre-flight Checks}
@@ -465,18 +449,14 @@ Before modifying any file, the agent is instructed to read it first:
 \begin{prompt}
 ## Pre-flight Checks
 
-- Read every file you will modify before changing it.
-- If the task depends on existing architecture or behavior,
-  read the relevant source files first.
-- If the task references files, commands, or config that do
-  not exist, stop and ask or report instead of guessing.
-- **When fixing a bug, an issue, or a race, write tests to
-  confirm them. Then fix them.**
+- Read every file before modifying it. Read relevant sources if the task depends on existing architecture.
+- If referenced files/commands/config don't exist, stop and ask or report---don't guess.
+- **When fixing bugs/issues/races: write tests to confirm first, then fix.**
 \end{prompt}
 
-\textbf{``Read every file you will modify before changing it.''}  The most common source of agent-introduced bugs is modifying a file based on an incorrect assumption about its current contents.  By requiring a fresh read immediately before any edit, the instruction ensures the model operates on the file's current state.
+\textbf{``Read every file before modifying it.''}  The most common source of agent-introduced bugs is modifying a file based on an incorrect assumption about its current contents.  By requiring a fresh read immediately before any edit, the instruction ensures the model operates on the file's current state.
 
-\textbf{``When fixing a bug{\ldots} write tests to confirm them.\ Then fix them.''}  This mandates test-first discipline: a test that reproduces the bug provides concrete verification that the fix is correct.  Writing the test forces the model to understand the bug precisely before attempting a fix.
+\textbf{``When fixing bugs/issues/races: write tests to confirm first, then fix.''}  This mandates test-first discipline: a test that reproduces the bug provides concrete verification that the fix is correct.  Writing the test forces the model to understand the bug precisely before attempting a fix.
 
 %......................................................................
 \subsection{Code Style Guidelines}
@@ -486,28 +466,17 @@ Before modifying any file, the agent is instructed to read it first:
 The prompt encodes a minimalist code philosophy:
 
 \begin{prompt}
-## Code Style Guidelines
+## Code Style
 
-- Write simple, clean, and readable code with minimal
-  indirection.
-- Organize the code in multiple files based on the code's
-  functionality.
-- Avoid unnecessary object attributes, local variables, and
-  config variables.
-- Avoid tight coupling among files and modules.
-- Avoid object/struct attribute redirections.
-- DO NOT USE CLOSURES.
-- No redundant abstractions or duplicate code.
+- Simple, clean, readable code with minimal indirection. Organize in multiple files by functionality.
+- Avoid unnecessary attributes, locals, config vars, tight coupling, and attribute redirections.
+- DO NOT USE CLOSURES. No redundant abstractions or duplicate code.
 - Public methods MUST have full documentation.
-- Understand the root cause of an issue or bug, and patch
-  the root cause instead of an ad hoc superficial fix.
-- Before you write code, wait and think if the code is
-  simple, elegant, general, and minimal.
-- Once you finish the task, DO NOT write documentation
-  unless the task specifically requires it.
+- Fix root causes, not symptoms. Think first: is the code simple, elegant, general, minimal?
+- Don't write documentation unless the task requires it.
 \end{prompt}
 
-Each guideline addresses an anti-pattern commonly exhibited by LLM-generated code.  For example, ``DO NOT USE CLOSURES'' steers the model toward explicit data structures (plain functions with arguments, classes with attributes) that are easier to test and reason about.  ``Before you write code, wait and think'' is a metacognitive instruction that asks the model to pause and evaluate its plan, spending more inference-time compute on design.
+Each guideline addresses an anti-pattern commonly exhibited by LLM-generated code.  For example, ``DO NOT USE CLOSURES'' steers the model toward explicit data structures (plain functions with arguments, classes with attributes) that are easier to test and reason about.  ``Think first: is the code simple, elegant, general, minimal?'' is a metacognitive instruction that asks the model to pause and evaluate its plan, spending more inference-time compute on design.
 
 %......................................................................
 \subsection{Deep Work Rules}
@@ -515,16 +484,12 @@ Each guideline addresses an anti-pattern commonly exhibited by LLM-generated cod
 %......................................................................
 
 \begin{prompt}
-## Deep Work Rules
+## Deep Work
 
-- When the task says "align", "match", or "make
-  consistent", read the target to determine the exact
-  target state before editing.
-- Use concrete values, not indirections.
-- For multi-part work, list the concrete planned changes
-  before executing them.
-- Every meaningful change should have a concrete
-  verification method (test, grep, CLI command).
+- For "align"/"match"/"make consistent": read the target state before editing. Never edit from vague references.
+- Use concrete values, not indirections (read Y first, then write specific values into X).
+- List concrete planned changes before executing multi-part work.
+- Every meaningful change needs a concrete verification method (test, grep, CLI).
 \end{prompt}
 
 These rules address failures where the model interprets instructions loosely and makes changes that are directionally correct but concretely wrong.
@@ -535,18 +500,16 @@ These rules address failures where the model interprets instructions loosely and
 %......................................................................
 
 \begin{prompt}
-## Planning for Complex Tasks
+## Complex Task Planning
 
-For tasks involving 3+ files, cross-module changes, or
-architectural work:
+For 3+ files, cross-module, or architectural work:
 
-1. List the files that need to change and why.
-1. State the exact intended change in each file.
+1. List files to change and why.
+1. State exact intended change per file.
 1. Identify dependencies and execution order.
-1. State how each change will be verified.
+1. State verification method per change.
 
-For simple single-file tasks, skip formal planning and
-execute directly.
+Skip for simple single-file tasks.
 \end{prompt}
 
 The complexity threshold---three or more files---avoids the overhead of planning trivial changes while ensuring comprehensive planning for tasks with cross-module dependencies.
@@ -557,22 +520,15 @@ The complexity threshold---three or more files---avoids the overhead of planning
 %......................................................................
 
 \begin{prompt}
-## Testing Instructions
+## Testing
 
-- Run lint and typecheckers and fix any lint and typecheck
-  errors.
-- You MUST achieve 100% branch coverage.
-- Tests MUST NOT use mocks, patches, fakes, or any form of
-  test doubles.
-- You MUST write integration tests or end-to-end tests.
-- Each test should be independent and verify actual behavior.
-- **Do NOT run all tests after modifications. Only run the
-  impacted tests.**
-- To confirm a race condition, add sleep statements before
-  racing statements with delays less than 0.1s.
+- Run lint/typecheckers; fix all errors. Achieve 100% branch coverage. Every error, including pre-existing ones, is yours---don't skip.
+- NO mocks, patches, fakes, or test doubles. Write integration/e2e tests. Each test independent, verifying actual behavior.
+- **Only run impacted tests after modifications.**
+- To confirm races: add random sleep (<0.1s) before racing statements.
 \end{prompt}
 
-The most opinionated rule is the no-mocks requirement.  Mock tests verify that code calls certain methods in a certain order---they test the implementation, not the behavior.  A test suite built on mocks can pass with flying colors while the system is fundamentally broken.  Integration tests that exercise actual behavior provide genuine confidence that the system works.
+The most opinionated rule is the no-mocks requirement.  Mock tests verify that code calls certain methods in a certain order---they test the implementation, not the behavior.  A test suite built on mocks can pass with flying colors while the system is fundamentally broken.  Integration tests that exercise actual behavior provide genuine confidence that the system works.  The clause ``Every error, including pre-existing ones, is yours---don't skip'' makes the agent responsible for the entire codebase health, not just the delta it introduced.
 
 %......................................................................
 \subsection{Self-Improvement Loop}
@@ -584,16 +540,10 @@ The agent maintains a preferences file that captures user invariants discovered 
 \begin{prompt}
 ## Self-Improvement Loop
 
-- Read the instructions in PWD/USER_PREFS.md at the start
-  of each task.
-- Then update PWD/USER_PREFS.md to capture the user
-  preferences and invariants by analyzing the task.
-- You MUST carefully and thoroughly get rid of the user
-  preferences and invariants that conflict with the newly
-  added ones.
+Read PWD/USER_PREFS.md at task start. Update with user preferences/invariants (no code snippets/symbols; skip one-off tasks). Remove conflicting old entries carefully and thoroughly.
 \end{prompt}
 
-This mechanism allows the agent to accumulate project knowledge over time without requiring the user to repeat themselves.  The conflict-resolution instruction mandates that the agent actively resolves contradictions when updating the file.
+This mechanism allows the agent to accumulate project knowledge over time without requiring the user to repeat themselves.  The conflict-resolution clause mandates that the agent actively resolves contradictions when updating the file.  The prohibition on code snippets and symbols keeps the file compact and robust to code changes; the one-off task exclusion prevents preference drift from idiosyncratic details.
 
 %......................................................................
 \subsection{Pre-Finish Verification}
@@ -603,19 +553,13 @@ This mechanism allows the agent to accumulate project knowledge over time withou
 \begin{prompt}
 ## Pre-Finish Verification
 
-Before calling finish(success=True, ...), you MUST:
+Before finish(success=True):
 
-1. Re-read every file you modified and verify the changes
-   are correct.
-1. Run the required checks (lint, typecheck, tests) and fix
-   any failures.
-1. Explicitly check each user requirement against what was
-   delivered.
-1. If any check fails, continue working instead of
-   finishing.
-1. If you have retried the same fix 3 times without
-   progress, step back, rethink the approach from scratch,
-   and try a different strategy.
+1. Re-read and verify every modified file.
+1. Run required checks (lint, typecheck, tests); fix failures.
+1. Check each user requirement against delivery.
+1. If any check fails, keep working.
+1. After 3 failed retries of same fix, rethink from scratch.
 \end{prompt}
 
 The three-retry threshold forces the model to break out of repetitive loops by abandoning the current approach and reconsidering the problem from first principles.
@@ -626,15 +570,9 @@ The three-retry threshold forces the model to break out of repetitive loops by a
 %......................................................................
 
 \begin{prompt}
-## Browsing files for a task
+## File Browsing
 
-- When you need to read files for a task, collect
-  information, including code snippets necessary for the
-  task, without much thinking, in a new file
-  PWD/tmp/file-information-{unique_id}.md. Then go over
-  the information in
-  PWD/tmp/file-information-{unique_id}.md, think deeply
-  on how to complete the task at hand.
+Collect info and code snippets in PWD/tmp/file-information-{unique_id}.md without overthinking, then review and think deeply.
 \end{prompt}
 
 This instruction applies the same two-phase collect-then-synthesize discipline used for web research (Section~\ref{sec:web-research}) to the local file system.  By writing a structured summary of each file's relevant information into a temporary markdown file, the agent externalizes its understanding into a compact artifact that is typically much smaller than the raw source files, freeing up context window capacity for subsequent reasoning and editing.
@@ -645,11 +583,9 @@ This instruction applies the same two-phase collect-then-synthesize discipline u
 %......................................................................
 
 \begin{prompt}
-## Launch desktop apps
+## Desktop Apps
 
-- Use screenshots, keyboard, and mouse to control a desktop
-  app.
-- Do not launch VS Code or its extensions.
+Use screenshots, keyboard, and mouse. Don't launch VS Code or its extensions.
 \end{prompt}
 
 The prohibition on launching VS~Code prevents a recursive loop: since the agent runs inside a VS~Code extension, launching another instance could corrupt the host session or create deadlocks.
